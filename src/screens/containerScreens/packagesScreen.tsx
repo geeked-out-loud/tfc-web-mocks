@@ -59,8 +59,7 @@ const PackagesScreen: React.FC = () => {
     <div className="min-h-screen bg-black relative overflow-x-hidden">
       {/* Radial Gold Glow at Top */}
       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-full max-w-[800px] h-[400px] bg-gradient-radial from-[#d7a900]/20 via-[#d7a900]/8 to-transparent opacity-60"></div>
-        {/* Add top padding to account for fixed navigation */}
-      <div className="pt-24 relative z-10 px-4 sm:px-6 lg:px-8">        {/* Header */}
+      <div className="relative z-10 px-4 sm:px-6 lg:px-8">        {/* Header */}
         <section className="py-12">
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-12 ddc-hardware">

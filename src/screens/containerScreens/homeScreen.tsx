@@ -48,7 +48,7 @@ export default function HomeScreen() {
   return (
     <div className="bg-white m-0 p-0">
       {/* Hero Section */}
-<div className="relative w-full bg-white overflow-hidden mt-24 min-h-[350px] sm:min-h-[33vh] md:min-h-[66vh] flex items-center">
+<div className="relative w-full bg-white overflow-hidden min-h-[350px] sm:min-h-[33vh] md:min-h-[66vh] flex items-center">
   {/* Background Image Full Height */}
   <img 
     src="/bg1.png" 

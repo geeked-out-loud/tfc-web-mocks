@@ -6,7 +6,7 @@ import './index.css'
 // Import screens
 import HomeScreen from './screens/containerScreens/homeScreen'
 import PackagesScreen from './screens/containerScreens/packagesScreen'
-// import AboutUs from './screens/staticScreens/aboutUs'
+import AboutUs from './screens/staticScreens/aboutUs'
 import UnderDevelopment from './screens/staticScreens/underDevelopment'
 
 // Import navigation
@@ -16,14 +16,14 @@ function App() {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <main>
+      <main className="pt-16">
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/packages" element={<PackagesScreen />} />
-          <Route path="/about" element={<UnderDevelopment />} />
+          <Route path="/about" element={<AboutUs />} />
           <Route path="/dev" element={<UnderDevelopment />} />
           {/* Catch all route for undefined paths */}
-          <Route path="*" element={<UnderDevelopment />} />
+          <Route path="*" element={<HomeScreen />} />
         </Routes>
       </main>
     </div>

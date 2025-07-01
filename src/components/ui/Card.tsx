@@ -3,7 +3,7 @@ import React from 'react';
 interface CardProps {
   image?: string;
   heading: string;
-  description: string;
+  description: string | React.ReactNode;
   price: string;
   className?: string;
   isSelected?: boolean;
