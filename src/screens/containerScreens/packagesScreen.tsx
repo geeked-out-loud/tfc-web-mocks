@@ -1,60 +1,63 @@
 import React, { useState } from 'react'
+import { useCachedPackages } from '../../hooks/useGlobalPackages'
 
 const PackagesScreen: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0)
+  
+  // Use cached packages data (doesn't trigger fetch)
+  const { data: packagesData, isLoading, error, isError } = useCachedPackages();
+  const packages = packagesData?.packages || [];
 
-  const packageTabs = [
-    {
-      id: 0,
-      title: 'Physical live sessions',
-      isActive: true
-    },
-    {
-      id: 1,
-      title: 'Online sessions',
-      isActive: false
-    },
-    {
-      id: 2,
-      title: 'Self training (exercise only + Nutrition)',
-      isActive: false
-    },
-    {
-      id: 3,
-      title: 'Self training (exercise only)',
-      isActive: false
-    }
-  ]
+  // Create package tabs from API data
+  const packageTabs = packages.map((pkg, index) => ({
+    id: index,
+    title: pkg.title,
+    isActive: index === 0
+  }));
 
-  const packageDetails = [
-    {
-      id: 0,
-      title: 'PHYSICAL LIVE SESSIONS',
-      description: 'In-person training at facility\nIncludes nutrition guidance',
-      price: '₹999/-',
-      image: '/live_sessions.jpg'
-    },
-    {
-      id: 1,
-      title: 'ONLINE SESSIONS',
-      description: 'Live training via video calls.\nIncludes nutrition guidance',
-      price: '₹699/-',
-      image: '/online_sessions.jpg'
-    },
-    {
-      id: 2,
-      title: 'SELF TRAINING + NUTRITION',
-      description: 'Add-on to 3a.\nIncludes a Nutrition Plan created by Nutritionist',
-      price: '₹899/-',
-      image: '/exercise_nutrition.jpg'    },
-    {
-      id: 3,
-      title: 'SELF TRAINING ONLY',
-      description: 'Access video-based training plans.\nNo trainer calls. No nutrition',
-      price: '₹599/-',
-      image: '/exercise.jpg'
-    }
-  ]
+  // Use API data for package details
+  const packageDetails = packages.map((pkg, index) => ({
+    id: index,
+    title: pkg.title.toUpperCase(),
+    description: pkg.short_description,
+    price: `₹${(parseInt(pkg.price) / 100).toLocaleString()}/-`,
+    image: pkg.image_url
+  }));
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d7a900] mx-auto mb-4"></div>
+          <p className="text-white">Loading packages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Failed to load packages</p>
+          <p className="text-white">{error?.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No packages available
+  if (packages.length === 0) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-white text-lg">No packages available at the moment.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-black relative overflow-x-hidden">
       {/* Radial Gold Glow at Top */}
@@ -69,7 +72,7 @@ const PackagesScreen: React.FC = () => {
         </section>        {/* Tab Navigation */}
         <section>
           <div className="max-w-7xl mx-auto">
-            {/* Mobile: Horizontal scroll */}
+            {/* Tab Navigation */}
             <div className="lg:hidden overflow-x-auto pb-4 mb-16">
               <div className="flex gap-4 min-w-max px-2">
                 {packageTabs.map((tab) => (
@@ -108,35 +111,44 @@ const PackagesScreen: React.FC = () => {
         </section>        {/* Package Details */}
         <section className="pb-20">
           <div className="w-full lg:max-w-7xl lg:mx-auto overflow-x-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center">{/* Image Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center">              {/* Image Section */}
               <div className="relative w-full lg:w-auto">
                 <div className="rounded-none lg:rounded-2xl overflow-hidden shadow-2xl">
                   <img 
-                    src={packageDetails[selectedTab].image}
-                    alt={packageDetails[selectedTab].title}
+                    src={packageDetails[selectedTab]?.image || '/wordmark_dark.png'}
+                    alt={packageDetails[selectedTab]?.title || 'Package'}
                     className="w-full h-[400px] lg:h-[500px] object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
-              </div>              {/* Content Section */}
+              </div>              
+
+              {/* Content Section */}
               <div className="space-y-8 px-0 lg:px-0">
                 <div>
                   <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 ddc-hardware break-words">
-                    {packageDetails[selectedTab].title}
-                  </h2><div className="text-lg text-white/80 leading-relaxed poppins-regular whitespace-pre-line mb-10">
-                    {packageDetails[selectedTab].description}
+                    {packageDetails[selectedTab]?.title}
+                  </h2>
+
+                  <div className="text-lg text-white/80 leading-relaxed poppins-regular whitespace-pre-line mb-10">
+                    {packageDetails[selectedTab]?.description}
                   </div>                  
+                  
                   {/* Dashed Separator */}
                   <div className="flex space-x-1 sm:space-x-2 mb-8 overflow-hidden">
                     {Array.from({ length: 20 }, (_, i) => (
                       <div key={i} className="w-2 sm:w-4 h-px bg-white/40 flex-shrink-0"></div>
                     ))}
-                  </div>{/* Price Section */}
+                  </div>
+
+                  {/* Price Section */}
                   <div className="flex justify-between items-center">
                     <span className="text-white/70 poppins-regular text-lg">
                       Plan Price
                     </span>
                     <span className="text-4xl font-bold text-white ddc-hardware">
-                      {packageDetails[selectedTab].price}
+                      {packageDetails[selectedTab]?.price}
                     </span>
                   </div>
                 </div>

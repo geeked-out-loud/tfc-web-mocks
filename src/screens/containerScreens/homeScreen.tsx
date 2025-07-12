@@ -2,9 +2,15 @@ import { Check } from 'lucide-react'
 import { useState } from 'react'
 import Slideshow from '../../components/ui/Slideshow'
 import Card from '../../components/ui/Card'
+import { useCachedPackages } from '../../hooks/useGlobalPackages'
 
 export default function HomeScreen() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
+  
+  // Use cached packages data (doesn't trigger fetch)
+  const { data: packagesData, isLoading, error, isError } = useCachedPackages();
+  const packages = packagesData?.packages || [];
+
   const slidesData = [
     {
       title: "PERSONALISED ASSESSMENT FIRST",
@@ -44,6 +50,30 @@ export default function HomeScreen() {
       backgroundImage: "/bg3.4.png"
     }
   ]
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="bg-white m-0 p-0 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d7a900] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading packages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="bg-white m-0 p-0 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Failed to load packages</p>
+          <p className="text-gray-600">{error?.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white m-0 p-0">
@@ -132,29 +162,17 @@ export default function HomeScreen() {
           </h2>
           <div className="overflow-x-auto pb-12 scrollbar-hide">
             <div className="flex space-x-8 min-w-max px-4">
-              {[{
-                heading: "Physical Live Sessions",
-                description: "In-person training at facility. Includes nutrition guidance",
-                price: "$99",
-                image: '/live_sessions.jpg'
-              }, {
-                heading: "Online Live Sessions",
-                description: "Live training via video calls. Includes nutrition guidance",
-                price: "$199",
-                image: '/online_sessions.jpg'
-              }, {
-                heading: "Self Training (Exercise + Nutrition)",
-                description: "Add-on to 3a. Includes a Nutrition Plan created by Nutritionist",
-                price: "$299",
-                image: '/exercise_nutrition.jpg'
-              }, {
-                heading: "Self Training (Exercise Only)",
-                description: "Access video-based training plans. No trainer calls. No nutrition",
-                price: "$299",
-                image: '/exercise.jpg'
-              }].map((card, i) => (
-                <div key={i} className="w-[22rem] flex-shrink-0">
-                  <Card {...card} isSelected={selectedCard === i} onClick={() => setSelectedCard(selectedCard === i ? null : i)} onBuyNow={() => console.log('Buy', card.heading)} />
+              {packages.map((pkg, i) => (
+                <div key={pkg.id} className="w-[22rem] flex-shrink-0">
+                  <Card 
+                    heading={pkg.title}
+                    description={pkg.short_description}
+                    price={`₹${(parseInt(pkg.price) / 100).toLocaleString()}`}
+                    image={pkg.image_url}
+                    isSelected={selectedCard === i} 
+                    onClick={() => setSelectedCard(selectedCard === i ? null : i)} 
+                    onBuyNow={() => console.log('Buy', pkg.title)} 
+                  />
                 </div>
               ))}
             </div>

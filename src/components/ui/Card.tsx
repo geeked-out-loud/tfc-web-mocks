@@ -22,12 +22,15 @@ const Card: React.FC<CardProps> = ({ image, heading, description, price, classNa
             src={image} 
             alt={heading}
             className="w-full h-full object-cover object-top"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <img 
             src="/wordmark_dark.png" 
             alt="TFC Wordmark"
             className="h-10 w-auto object-contain opacity-50"
+            loading="lazy"
           />
         )}
       </div>
