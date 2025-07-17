@@ -167,27 +167,18 @@ export const apiService = {
      * Register a trainer with additional profile information
      */
     registerTrainer: async (trainerData: {
-      full_name: string;
       bio: string;
       certifications: string[];
       experience_years: number;
     }) => {
-      // Get the current user data from session
-      const userData = sessionService.getUserData();
+      // We don't need to pass user_id as it's identified by the JWT token
       
-      if (!userData || !userData.id) {
-        console.error('API: Missing user ID in session data. This is required for registration.');
-        throw new Error('Missing user ID. Please log in before registering profile.');
-      }
-      
-      // Prepare the payload with user ID
+      // Prepare the payload (no user_id needed)
       const payload = {
-        ...trainerData,
-        user_id: userData.id  // Include the user ID from session (non-optional now)
+        ...trainerData
       };
       
       console.log('API: Sending trainer registration data:', payload);
-      console.log('API: User ID from session:', userData.id);
       
       try {
         // Ensure we have a valid token
@@ -236,22 +227,36 @@ export const apiService = {
     login: async (credentials: PasswordCredentials | GoogleCredentials): Promise<AuthResponse> => {
       console.log(`API: Login attempt with provider: ${credentials.provider}`);
       
+      // Make sure we have the correct provider value based on the actual credential type
+      // Always respect the explicitly passed provider value, as it's the most accurate
+      const providerValue = credentials.provider;
+      
+      // Additional check to ensure we're using the right value (this will be helpful for debugging)
+      if ('password' in credentials && credentials.provider !== 'password') {
+        console.warn('API: Warning - Password credentials detected but provider is not "password"');
+        console.warn(`API: Using explicitly provided provider: ${credentials.provider}`);
+      }
+      
+      console.log(`API: Using provider: ${providerValue}`);
+      
       // Structure the request based on provider
       const requestData = 
         'password' in credentials 
           ? { // Password login
-              provider: credentials.provider,
+              provider: 'password', // Always use 'password' for password credentials
               email: credentials.email,
               password: credentials.password,
               full_name: credentials.fullName || '' // Include fullName for password login
               // idToken removed from body as it should be in the Authorization header
             }
           : { // Google login
-              provider: credentials.provider,
+              provider: 'google.com', // Always use 'google.com' for Google credentials
               email: credentials.email,
               full_name: credentials.fullName || ''
               // idToken removed from body as it should be in the Authorization header
             };
+      
+      // No need to override the provider again, we've already set it correctly above
       
       // Log what we're sending (excluding password)
       console.log(`API: Login request for provider ${requestData.provider}:`, {
@@ -287,7 +292,11 @@ export const apiService = {
       try {
         // Make a clean request to the backend with the Firebase token in the header
         const response = await api.post('/auth/login', requestData, requestConfig);
+        
+        // Detailed logging to help debug provider issues
         console.log('API: Raw response data:', response.data);
+        console.log('API: Login response user data:', response.data?.user);
+        console.log('API: Provider sent:', requestData.provider);
         
         const responseData = response.data;
         

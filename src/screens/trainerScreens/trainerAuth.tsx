@@ -105,25 +105,22 @@ const TrainerAuth: React.FC = () => {
       // Brief delay to ensure session data is fully set up
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Double-check we have a valid user session
-      const userData = sessionService.getUserData();
+      // Double-check we have a valid token
       const token = sessionService.getToken();
       
       console.log('TrainerAuth: Session data check:', { 
-        hasUserData: !!userData,
-        userId: userData?.id,
         hasToken: !!token
       });
       
-      if (!userData || !userData.id || !token) {
-        console.error('TrainerAuth: Invalid session after account creation');
+      if (!token) {
+        console.error('TrainerAuth: Invalid session after account creation - no token');
         setError('Account created, but session setup failed. Please try logging in.');
         setIsLoading(false);
         return false;
       }
       
       // Step 2: Register trainer profile
-      console.log('TrainerAuth: Now registering trainer profile with user_id:', userData.id);
+      console.log('TrainerAuth: Now registering trainer profile');
       const profileSuccess = await registerTrainerProfile(fullName, bio, certifications, experienceYears);
       
       if (!profileSuccess) {

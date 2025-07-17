@@ -171,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth: Sending to backend...');
       
       // Then, authenticate with your backend
+      console.log('Auth: Logging in with provider "password"');
       const response = await apiService.auth.login({
         provider: "password",
         email,
@@ -179,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       console.log('Auth: Backend authentication successful');
+      console.log('Auth: Used provider:', 'password');
       
       // Save the auth state with the backend token
       saveAuthState(response.token, response.user);
@@ -304,6 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Now register with your backend by using the login endpoint
+      console.log('Auth: Registering with backend using provider "password"');
       const response = await apiService.auth.login({
         provider: "password",
         email,
@@ -312,7 +315,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         idToken: firebaseToken
       });
       
+      // Log provider to help debug the issue
       console.log('Auth: Backend login successful for new user', response);
+      console.log('Auth: Provider used for login:', 'password');
       
       // Make sure the user data has the correct full name
       const userData = {...response.user};
@@ -346,7 +351,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Register trainer profile information after basic registration
   const registerTrainerProfile = async (
-    fullName: string,
+    _fullName: string, // Not used in API call
     bio: string,
     certifications: string[],
     experienceYears: number
@@ -355,19 +360,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      // First check if we have a valid user session
+      // Get user data and check if we have a valid token
       const userData = sessionService.getUserData();
+      const token = sessionService.getToken();
       console.log('Auth: Registering trainer profile information...');
-      console.log('Auth: User data from session for trainer profile:', userData);
       
-      if (!userData || !userData.id) {
-        console.error('Auth: No valid user_id found in session for trainer registration');
+      if (!token) {
+        console.error('Auth: No valid token found in session for trainer registration');
         throw new Error('Authentication issue: Please log in again to complete your profile.');
       }
       
-      // Call the trainer registration API
+      // Call the trainer registration API - note we're not sending fullName or user_id
       const response = await apiService.auth.registerTrainer({
-        full_name: fullName,
         bio,
         certifications,
         experience_years: experienceYears
@@ -376,7 +380,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth: Trainer profile registration successful', response);
       
       // Update local user data with additional profile info if available
-      if (response && response.profile) {
+      if (response && response.profile && userData) {
         // Merge the profile data with existing user data
         const updatedUserData = {
           ...userData,
