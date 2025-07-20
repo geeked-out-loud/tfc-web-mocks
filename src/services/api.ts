@@ -464,6 +464,44 @@ export const apiService = {
       const response = await api.get('/membership/packages');
       return response.data;
     }
+  },
+  trainer: {
+    getProfile: async () => {
+      const response = await api.get('/trainers/');
+      return response.data;
+    },
+    getAppointments: async (filters?: {
+      date?: string;
+      type?: 'EXERCISE' | 'NUTRITION' | 'ASSESSMENT';
+      sessionType?: 'physical' | 'online' | 'self';
+    }) => {
+      let url = '/trainers/appointments';
+      
+      // Add query parameters if filters are provided
+      if (filters) {
+        const queryParams = new URLSearchParams();
+        
+        if (filters.date) {
+          queryParams.append('date', filters.date);
+        }
+        
+        if (filters.type) {
+          queryParams.append('type', filters.type);
+        }
+        
+        if (filters.sessionType) {
+          queryParams.append('session_type', filters.sessionType);
+        }
+        
+        // Add query string if there are any parameters
+        if ([...queryParams].length > 0) {
+          url += `?${queryParams.toString()}`;
+        }
+      }
+      
+      const response = await api.get(url);
+      return response.data;
+    }
   }
 };
 

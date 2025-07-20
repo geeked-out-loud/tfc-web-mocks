@@ -14,12 +14,15 @@ const TrainerAuth: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loginWithCredentials, loginWithGoogle, registerWithCredentials, registerTrainerProfile } = useAuth();
   
-  // If already authenticated, redirect to dashboard
+  // Track whether registration is in progress
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  // Only redirect to dashboard if authenticated and not in the middle of registering
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isRegistering) {
       navigate('/trainer/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isRegistering, navigate]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -67,6 +70,7 @@ const TrainerAuth: React.FC = () => {
   ) => {
     setIsLoading(true);
     setError('');
+    setIsRegistering(true);
     
     try {
       console.log('TrainerAuth: Starting combined signup flow...');
@@ -97,6 +101,7 @@ const TrainerAuth: React.FC = () => {
       if (!accountSuccess) {
         setError('Registration failed. This email may already be in use.');
         setIsLoading(false);
+        setIsRegistering(false); // Clear registration flag on error
         return false;
       }
       
@@ -126,17 +131,26 @@ const TrainerAuth: React.FC = () => {
       if (!profileSuccess) {
         setError('Account created, but failed to save trainer profile. Please try again.');
         setIsLoading(false);
+        setIsRegistering(false); // Clear registration flag on error
         return false;
       }
       
-      // Both steps successful - redirect will happen via useEffect since isAuthenticated is now true
+      // Both steps successful - now we can allow navigation to the dashboard
       console.log('TrainerAuth: Trainer signup completed successfully!');
       setIsLoading(false);
+      setIsRegistering(false); // Registration complete, allow navigation
+      
+      // After a brief delay, navigate manually to ensure proper sequence
+      setTimeout(() => {
+        navigate('/trainer/dashboard');
+      }, 500);
+      
       return true;
     } catch (err: any) {
       console.error('TrainerAuth: Signup error:', err);
       setError(err.message || 'Registration failed. Please try again later.');
       setIsLoading(false);
+      setIsRegistering(false); // Clear registration flag on error
       return false;
     }
   };

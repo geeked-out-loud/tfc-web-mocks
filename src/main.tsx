@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './services/queryClient'
+import { NotificationProvider } from './hooks/useNotification'
 import './index.css'
 
 // Import screens
@@ -13,6 +14,8 @@ import AboutUs from './screens/staticScreens/aboutUs'
 import UnderDevelopment from './screens/staticScreens/underDevelopment'
 import TrainerAuth from './screens/trainerScreens/trainerAuth'
 import TrainerHome from './screens/trainerScreens/trainerHome'
+import AssignedClients from './screens/trainerScreens/assignedClients'
+import ViewClient from './screens/trainerScreens/viewClient'
 
 // Import navigation
 import Navigation from './components/ui/Navigation'
@@ -31,10 +34,11 @@ import SessionManager from './components/SessionManager'
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen">
-        <GlobalDataLoader />
-        <SessionManager />
-        <Routes>
+      <NotificationProvider>
+        <div className="min-h-screen">
+          <GlobalDataLoader />
+          <SessionManager />
+          <Routes>
           {/* Trainer routes without navigation */}
           <Route path="/trainer/login" element={<TrainerAuth />} />
           <Route path="/trainer/signup" element={<TrainerAuth />} />
@@ -46,7 +50,23 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
+          <Route 
+            path="/trainer/assigned-clients" 
+            element={
+              <ProtectedRoute>
+                <AssignedClients />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/trainer/client/:clientId" 
+            element={
+              <ProtectedRoute>
+                <ViewClient />
+              </ProtectedRoute>
+            } 
+          />
+                    
           {/* Public routes with navigation */}
           <Route
             path="*"
@@ -68,6 +88,7 @@ function App() {
           />
         </Routes>
       </div>
+      </NotificationProvider>
     </AuthProvider>
   )
 }
