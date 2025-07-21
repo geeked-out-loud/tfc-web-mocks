@@ -1,7 +1,17 @@
 import axios from 'axios';
 import type { AxiosError } from 'axios';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Use Vercel proxy in production to avoid mixed content issues
+const getApiBaseUrl = () => {
+  // If deployed on Vercel, use the proxy endpoint
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    return '/api';
+  }
+  // Otherwise use the environment variable (for local development)
+  return import.meta.env.VITE_API_BASE_URL;
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
