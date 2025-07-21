@@ -167,7 +167,7 @@ export default function HomeScreen() {
                   <Card 
                     heading={pkg.title}
                     description={pkg.short_description}
-                    price={`₹${(parseInt(pkg.price) / 100).toLocaleString()}`}
+                    price={`₹${parseInt(pkg.price).toLocaleString()}`}
                     image={pkg.image_url}
                     isSelected={selectedCard === i} 
                     onClick={() => setSelectedCard(selectedCard === i ? null : i)} 
