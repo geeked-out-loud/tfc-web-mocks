@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MoreVertical, ChevronRight, Users, Calendar, X, Edit } from 'lucide-react';
+import { ArrowLeft, MoreVertical, ChevronRight, Users, Calendar, Edit } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 

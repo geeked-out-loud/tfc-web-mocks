@@ -1,4 +1,4 @@
-import { BarChart2, Check, Users2, ClipboardCheck, Headphones, Divide } from "lucide-react";
+import { BarChart2, Check, Users2, ClipboardCheck, Headphones } from "lucide-react";
 
 export default function AboutUs() {
   return (
