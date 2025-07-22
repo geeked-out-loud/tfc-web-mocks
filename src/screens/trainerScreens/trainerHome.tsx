@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useTrainerProfile, useTrainerAppointments } from '../../hooks/useTrainer';
 import NotificationDrawer from '../../components/ui/NotificationDrawer';
+import '../../components/ui/scrollbar-hide.css';
 import type { Appointment } from '../../hooks/useTrainer';
 
 interface DashboardStats {
@@ -216,15 +217,33 @@ const TrainerHome: React.FC = () => {
             </div>
           )}
           
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-xs font-medium text-gray-500">Clients</h4>
-              <p className="text-xl font-bold">{stats.clientsCount}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-xs font-medium text-gray-500">Meal Logs</h4>
-              <p className="text-xl font-bold">{stats.mealLogsCount}</p>
-            </div>
+          <div className="space-y-3 mb-6">
+            <button 
+              onClick={() => navigate('/trainer/assigned-clients')}
+              className="w-full bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-1">Assigned Clients</h4>
+                  <p className="text-2xl font-bold text-gray-900 ddc-hardware">{stats.clientsCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">You have {stats.clientsCount} assigned clients</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              </div>
+            </button>
+            <button 
+              onClick={() => alert('Meal logs feature coming soon!')}
+              className="w-full bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-1">Meal logs</h4>
+                  <p className="text-2xl font-bold text-gray-900 ddc-hardware">{stats.mealLogsCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">3 meals awaiting for response</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              </div>
+            </button>
           </div>
           
           <button
@@ -331,7 +350,10 @@ const TrainerHome: React.FC = () => {
                 <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
               </div>
             </button>
-            <button className="bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group">
+            <button 
+              onClick={() => alert('Meal logs feature coming soon!')}
+              className="bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-medium text-gray-600 mb-1">Meal logs</h4>
@@ -402,54 +424,56 @@ const TrainerHome: React.FC = () => {
                 <Loader2 className="h-10 w-10 text-yellow-500 animate-spin" />
               </div>
             ) : (
-              <div className="space-y-4 mt-2">
-                {filteredAppointments.length === 0 ? (
-                  <div className="text-center py-16 bg-gray-50 rounded-lg">
-                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-600 font-medium">No appointments match the selected filter</p>
-                    <button 
-                      className="mt-3 text-sm text-yellow-600 underline"
-                      onClick={() => setActiveTab('all')}
-                    >
-                      View all appointments
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                    {filteredAppointments.map((appointment) => (
-                      <div 
-                        key={appointment.id} 
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+              <div className="h-96 overflow-y-auto scrollbar-hide">
+                <div className="space-y-4 mt-2">
+                  {filteredAppointments.length === 0 ? (
+                    <div className="text-center py-16 bg-gray-50 rounded-lg">
+                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-600 font-medium">No appointments match the selected filter</p>
+                      <button 
+                        className="mt-3 text-sm text-yellow-600 underline"
+                        onClick={() => setActiveTab('all')}
                       >
-                        <div className="flex items-center">
-                          <div className="w-14 h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md mr-4">
-                            <span className="text-sm font-bold">{format(new Date(appointment.date), 'dd')}</span>
-                            <span className="text-xs">{format(new Date(appointment.date), 'MMM')}</span>
-                          </div>
-                          <div>
-                            <div className="flex items-center">
-                              <div className="h-6 w-6 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs mr-2">
-                                <Users className="h-3 w-3" />
-                              </div>
-                              <p className="text-base font-bold">{appointment.clientName}</p>
+                        View all appointments
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+                      {filteredAppointments.map((appointment) => (
+                        <div 
+                          key={appointment.id} 
+                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center">
+                            <div className="w-14 h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md mr-4">
+                              <span className="text-sm font-bold">{format(new Date(appointment.date), 'dd')}</span>
+                              <span className="text-xs">{format(new Date(appointment.date), 'MMM')}</span>
                             </div>
-                            <p className="text-xs text-gray-500">Appointment {appointment.appointmentNumber}</p>
-                            <span 
-                              className={`inline-block mt-2 text-white text-xs py-1 px-2 rounded ${
-                                appointment.type === 'EXERCISE' ? 'bg-yellow-500' :
-                                appointment.type === 'NUTRITION' ? 'bg-green-500' :
-                                'bg-blue-500'
-                              }`}
-                            >
-                              {appointment.type}
-                            </span>
+                            <div>
+                              <div className="flex items-center">
+                                <div className="h-6 w-6 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs mr-2">
+                                  <Users className="h-3 w-3" />
+                                </div>
+                                <p className="text-base font-bold">{appointment.clientName}</p>
+                              </div>
+                              <p className="text-xs text-gray-500">Appointment {appointment.appointmentNumber}</p>
+                              <span 
+                                className={`inline-block mt-2 text-white text-xs py-1 px-2 rounded ${
+                                  appointment.type === 'EXERCISE' ? 'bg-yellow-500' :
+                                  appointment.type === 'NUTRITION' ? 'bg-green-500' :
+                                  'bg-blue-500'
+                                }`}
+                              >
+                                {appointment.type}
+                              </span>
+                            </div>
                           </div>
+                          <ChevronRight className="h-5 w-5 text-gray-400" />
                         </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -2,7 +2,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './services/queryClient'
 import { NotificationProvider } from './hooks/useNotification'
 import './index.css'
@@ -16,6 +15,8 @@ import TrainerAuth from './screens/trainerScreens/trainerAuth'
 import TrainerHome from './screens/trainerScreens/trainerHome'
 import AssignedClients from './screens/trainerScreens/assignedClients'
 import ViewClient from './screens/trainerScreens/viewClient'
+import ClientSchedulePage from './screens/trainerScreens/clientSchedulePage'
+import ModifyPlan from './screens/trainerScreens/modifyPlan'
 
 // Import navigation
 import Navigation from './components/ui/Navigation'
@@ -66,6 +67,22 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/trainer/client/:clientId/schedule" 
+            element={
+              <ProtectedRoute>
+                <ClientSchedulePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/trainer/client/:clientId/modify-plan" 
+            element={
+              <ProtectedRoute>
+                <ModifyPlan />
+              </ProtectedRoute>
+            } 
+          />
                     
           {/* Public routes with navigation */}
           <Route
@@ -99,7 +116,6 @@ createRoot(document.getElementById('root')!).render(
       <Router>
         <App />
       </Router>
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </StrictMode>,
 )
