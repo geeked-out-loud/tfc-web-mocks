@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
@@ -57,6 +59,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       try {
         console.log('Auth: Checking for stored session...');
+        
+        // First, check for Google redirect result
+        try {
+          console.log('Auth: Checking for redirect result...');
+          const redirectResult = await getRedirectResult(auth);
+          
+          if (redirectResult && redirectResult.user) {
+            console.log('Auth: Found redirect result from Google sign-in');
+            const user = redirectResult.user;
+            
+            // Get Firebase ID token
+            const idToken = await user.getIdToken();
+            
+            if (idToken) {
+              // Authenticate with backend using Firebase token
+              const response = await apiService.auth.login({
+                provider: "google.com",
+                email: user.email || "",
+                fullName: user.displayName || "",
+                idToken
+              });
+              
+              console.log('Auth: Redirect authentication successful');
+              
+              // Save the auth state with the backend token
+              if (mounted) {
+                saveAuthState(response.token, response.user);
+                setIsLoading(false);
+                return; // Exit early since we've successfully authenticated
+              }
+            }
+          }
+        } catch (redirectError) {
+          console.warn('Auth: Error checking redirect result:', redirectError);
+          // Continue with normal session restoration
+        }
         
         // Before anything else, check for an active Firebase user
         const currentUser = auth.currentUser;
@@ -206,12 +244,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         prompt: 'select_account'  // Force account selection
       });
       
-      // Sign in with popup
-      console.log('Auth: Starting Google sign-in flow...');
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      let result;
+      let user;
       
-      console.log('Auth: Google authentication successful');
+      try {
+        // First try popup method
+        console.log('Auth: Starting Google sign-in with popup...');
+        result = await signInWithPopup(auth, provider);
+        user = result.user;
+        console.log('Auth: Google popup authentication successful');
+      } catch (popupError: any) {
+        console.warn('Auth: Popup blocked or failed, trying redirect method:', popupError.message);
+        
+        // If popup fails (likely blocked), use redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.message.includes('popup') ||
+            popupError.message.includes('Illegal url for new iframe')) {
+          
+          console.log('Auth: Using redirect method as fallback...');
+          await signInWithRedirect(auth, provider);
+          // The redirect will handle the rest, return true for now
+          // The actual authentication will be handled by the redirect result check
+          return true;
+        } else {
+          // If it's not a popup-related error, rethrow it
+          throw popupError;
+        }
+      }
       
       if (user) {
         try {
