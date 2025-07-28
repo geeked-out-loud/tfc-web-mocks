@@ -1,3 +1,4 @@
+// ...existing code...
 import axios from 'axios';
 import type { AxiosError } from 'axios';
 
@@ -486,30 +487,19 @@ export const apiService = {
       sessionType?: 'physical' | 'online' | 'self';
     }) => {
       let url = '/trainers/appointments';
-      
       // Add query parameters if filters are provided
       if (filters) {
         const queryParams = new URLSearchParams();
-        
-        if (filters.date) {
-          queryParams.append('date', filters.date);
-        }
-        
-        if (filters.type) {
-          queryParams.append('type', filters.type);
-        }
-        
-        if (filters.sessionType) {
-          queryParams.append('session_type', filters.sessionType);
-        }
-        
-        // Add query string if there are any parameters
-        if ([...queryParams].length > 0) {
-          url += `?${queryParams.toString()}`;
-        }
+        if (filters.date) queryParams.append('date', filters.date);
+        if (filters.type) queryParams.append('type', filters.type);
+        if (filters.sessionType) queryParams.append('session_type', filters.sessionType);
+        if ([...queryParams].length > 0) url += `?${queryParams.toString()}`;
       }
-      
       const response = await api.get(url);
+      return response.data;
+    },
+    getMyClients: async () => {
+      const response = await api.get('/assessments/my-clients');
       return response.data;
     }
   }

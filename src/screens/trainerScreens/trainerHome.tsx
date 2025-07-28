@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useTrainerProfile, useTrainerAppointments } from '../../hooks/useTrainer';
+import { useTrainerClients } from '../../hooks/useTrainerClients';
 import NotificationDrawer from '../../components/ui/NotificationDrawer';
 import '../../components/ui/scrollbar-hide.css';
 import type { Appointment } from '../../hooks/useTrainer';
@@ -41,6 +42,7 @@ const TrainerHome: React.FC = () => {
   // For fallback if API fails
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
 
+
   // Use the trainer profile hook
   const { 
     data: trainerProfileData, 
@@ -72,6 +74,9 @@ const TrainerHome: React.FC = () => {
     } : undefined
   );
 
+  // Use the trainer clients hook for assigned clients count
+  const { data: trainerClientsData, isLoading: isLoadingClients, error: clientsError } = useTrainerClients();
+
   // Update trainer data when profile is loaded
   useEffect(() => {
     setIsLoading(isLoadingTrainer);
@@ -90,14 +95,12 @@ const TrainerHome: React.FC = () => {
       }
     }
     
-    if (trainerProfileData) {
-      // Update stats with data from the trainer profile
-      setStats({
-        clientsCount: trainerProfileData.clients || 0,
-        mealLogsCount: trainerProfileData.mealLogs || 0,
-        appointmentsCount: appointmentsData?.appointments?.length || 0
-      });
-    }
+    // Update stats with API data and mocks as appropriate
+    setStats({
+      clientsCount: trainerClientsData?.count || 0,
+      mealLogsCount: trainerProfileData?.mealLogs || 0,
+      appointmentsCount: appointmentsData?.appointments?.length || 0
+    });
   }, [trainerProfileData, isLoadingTrainer, trainerError, user, navigate]);;
 
   // Update filtered appointments when appointments data changes

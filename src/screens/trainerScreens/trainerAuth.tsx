@@ -156,16 +156,16 @@ const TrainerAuth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
-      {/* Banner Image Section */}
-      <div className="relative h-[50vh] lg:h-full lg:w-1/2">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Banner Image Section - full width on all screens */}
+      <div className="relative w-full h-[40vh] lg:h-[60vh]">
         <img 
           src="/trainerLoginBanner.png" 
           alt="TFC Trainer Portal" 
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black via-black/70 to-transparent flex flex-col justify-end lg:justify-center p-6 lg:p-12">
-          <div className="text-white lg:max-w-md">
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent flex flex-col justify-end items-start p-6 lg:p-12">
+          <div className="text-white max-w-2xl">
             <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold ddc-hardware mb-2">
               WELCOME TO <span className="text-yellow-400">TFC</span>
             </h1>
@@ -178,11 +178,11 @@ const TrainerAuth: React.FC = () => {
           </div>
         </div>
       </div>
-      
-      {/* Auth Form Section */}
-      <div className="flex-1 lg:w-1/2 p-6 lg:p-12 lg:flex lg:items-center lg:justify-center">
-        <div className="w-full max-w-md mx-auto lg:mx-0">
-          <div className="space-y-6 py-12 lg:py-0 w-full">
+
+      {/* Auth Form Section - below banner on all screens */}
+      <div className="flex-1 w-full flex flex-col items-center justify-start px-4 py-8 lg:py-12">
+        <div className="w-full max-w-md">
+          <div className="space-y-6 w-full">
             {/* Modern toggle switch with sliding animation */}
             <div className="mb-8">
               <div className="bg-gray-100 rounded-full p-1 flex w-full relative">
@@ -218,7 +218,7 @@ const TrainerAuth: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="mb-6">
               {isLogin ? (
                 <LoginForm 
@@ -234,14 +234,14 @@ const TrainerAuth: React.FC = () => {
                 />
               )}
             </div>
-            
+
             {/* Show the "or continue with" section */}
             <>
               <div className="relative flex items-center justify-center my-6">
                 <div className="border-t border-gray-300 absolute w-full"></div>
                 <div className="bg-white px-4 relative text-sm text-gray-500">or continue with</div>
               </div>
-              
+
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -257,7 +257,7 @@ const TrainerAuth: React.FC = () => {
                 <span className="font-medium">Google</span>
               </button>
             </>
-            
+
             <div className="text-center mt-6">
               {isLogin ? (
                 <button 
@@ -274,7 +274,7 @@ const TrainerAuth: React.FC = () => {
                 </p>
               )}
             </div>
-            
+
             {/* Footer text for desktop */}
             <div className="hidden lg:block text-center pt-8 border-t border-gray-200 mt-8">
               <p className="text-xs text-gray-400">

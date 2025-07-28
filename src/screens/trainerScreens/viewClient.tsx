@@ -4,13 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import '../../components/ui/scrollbar-hide.css';
 
-// Mock client data
-const mockClientData = {
-  id: '12312434',
-  name: 'ARJUN PALUOY',
-  avatar: '/experts.png',
-  planStatus: 'ACTIVE'
-};
+
+import { useTrainerClients } from '../../hooks/useTrainerClients';
 
 // Mock appointments data
 const mockAppointments = {
@@ -105,8 +100,10 @@ const ViewClient: React.FC = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Use clientId to fetch specific client data (for now using mock data)
-  console.log('Viewing client:', clientId);
+
+  // Fetch all clients and find the one matching clientId
+  const { data, isLoading, error } = useTrainerClients();
+  const client = data?.clients.find(c => c.id === clientId);
 
   const handleBackPress = () => {
     navigate('/trainer/assigned-clients');
@@ -212,25 +209,17 @@ const ViewClient: React.FC = () => {
               <div className="flex items-center justify-between py-4 lg:py-0 lg:pt-6">
                 <div className="flex items-center space-x-3">
                   <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full bg-gray-200 overflow-hidden">
-                    {mockClientData.avatar ? (
-                      <img 
-                        src={mockClientData.avatar}
-                        alt={mockClientData.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center bg-gray-900 text-white text-sm lg:text-base font-bold ddc-hardware">
-                        {getInitials(mockClientData.name)}
-                      </div>
-                    )}
+                    <div className="h-full w-full flex items-center justify-center bg-gray-900 text-white text-sm lg:text-base font-bold ddc-hardware">
+                      {getInitials(client?.user_name || '')}
+                    </div>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 poppins-regular">
-                      ID: {mockClientData.id}
-                    </p>
                     <h1 className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
-                      {mockClientData.name}
+                      {client?.user_name || '—'}
                     </h1>
+                    <p className="text-sm text-gray-500 poppins-regular">
+                      {client?.user_email || ''}
+                    </p>
                   </div>
                 </div>
                 
@@ -533,26 +522,39 @@ const ViewClient: React.FC = () => {
             className="absolute inset-0 bg-black bg-opacity-50"
             onClick={() => setIsAssessmentModalOpen(false)}
           />
-          
           {/* Modal Content */}
           <div className="relative bg-white w-full max-w-md rounded-t-3xl animate-slide-up-enter overflow-hidden">
             {/* Header */}
             <div className="text-center py-4 border-b border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 ddc-hardware">USER ASSESSMENT</h2>
             </div>
-
             {/* Content */}
             <div className="p-4 space-y-4">
               {/* Goals Section */}
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-2 ddc-hardware">Goals</h3>
-                <p className="text-sm text-gray-700 ddc-hardware">TO BURN MORE CALORIES</p>
+                {client?.fitness_goals && client.fitness_goals.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {client.fitness_goals.map((goal, idx) => (
+                      <li key={idx} className="text-sm text-gray-700 ddc-hardware">{goal}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-700 ddc-hardware">—</p>
+                )}
               </div>
-
               {/* Injuries Section */}
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-2 ddc-hardware">Injuries</h3>
-                <p className="text-sm text-gray-700 ddc-hardware">RIGHT HAND THUMB INJURY</p>
+                {client?.injuries && client.injuries.length > 0 ? (
+                  <ul className="list-disc pl-5">
+                    {client.injuries.map((injury, idx) => (
+                      <li key={idx} className="text-sm text-gray-700 ddc-hardware">{injury}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-700 ddc-hardware">—</p>
+                )}
               </div>
             </div>
           </div>
