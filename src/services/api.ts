@@ -501,6 +501,10 @@ export const apiService = {
     getMyClients: async () => {
       const response = await api.get('/assessments/my-clients');
       return response.data;
+    },
+    getDashboard: async () => {
+      const response = await api.get('/trainers/dashboard');
+      return response.data;
     }
   }
 };

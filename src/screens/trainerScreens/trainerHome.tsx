@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useTrainerProfile, useTrainerAppointments } from '../../hooks/useTrainer';
 import { useTrainerClients } from '../../hooks/useTrainerClients';
+import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 import NotificationDrawer from '../../components/ui/NotificationDrawer';
 import '../../components/ui/scrollbar-hide.css';
 import type { Appointment } from '../../hooks/useTrainer';
@@ -31,6 +32,7 @@ const TrainerHome: React.FC = () => {
   });
 
   // Define our tab types
+  // Tabs definition for display
   const packageTabs = [
     { id: 'all', title: 'All' },
     { id: 'physical', title: 'Physical live' },
@@ -38,9 +40,50 @@ const TrainerHome: React.FC = () => {
     { id: 'exercise', title: 'Exercise' },
     { id: 'nutrition', title: 'Nutrition' }
   ];
+
+  // Helper to get count for each tab from dashboardData
+  const getTabCount = (tabId: string): number => {
+    if (!dashboardData || !dashboardData.clients_by_category) return 0;
+    if (tabId === 'all') {
+      // Sum all categories
+      return dashboardData.clients_by_category.reduce((sum: number, cat: any) => sum + (cat.count || 0), 0);
+    }
+    // Find the category by id (case-insensitive match)
+    const found = dashboardData.clients_by_category.find((cat: any) =>
+      (cat.category || '').toLowerCase() === tabId.toLowerCase()
+    );
+    return found?.count || 0;
+  };
   
-  // For fallback if API fails
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
+  // Appointments to display for the selected tab, filtered by tab/category
+  const getAppointmentsForTab = (): any[] => {
+    if (!dashboardData || !dashboardData.today_appointments) return [];
+    const allAppointments = dashboardData.today_appointments;
+    if (activeTab === 'all') return allAppointments;
+    if (activeTab === 'physical') {
+      // Show only PHYSICAL session_type
+      return allAppointments.filter((a: any) => (a.session_type || '').toUpperCase() === 'PHYSICAL');
+    }
+    if (activeTab === 'online') {
+      // Show only ONLINE session_type
+      return allAppointments.filter((a: any) => (a.session_type || '').toUpperCase() === 'ONLINE');
+    }
+    if (activeTab === 'exercise') {
+      // Show only EXERCISE type (if available)
+      return allAppointments.filter((a: any) => (a.type || '').toUpperCase() === 'EXERCISE');
+    }
+    if (activeTab === 'nutrition') {
+      // Show only NUTRITION type (if available)
+      return allAppointments.filter((a: any) => (a.type || '').toUpperCase() === 'NUTRITION');
+    }
+    return allAppointments;
+  };
+
+  // Dashboard API
+  const { data: dashboardData, isLoading: isLoadingDashboard, error: dashboardError } = useTrainerDashboard();
+
+  // Trainer clients API for total assigned clients
+  const { data: trainerClientsData, isLoading: isLoadingClients, error: clientsError } = useTrainerClients();
 
 
   // Use the trainer profile hook
@@ -74,18 +117,14 @@ const TrainerHome: React.FC = () => {
     } : undefined
   );
 
-  // Use the trainer clients hook for assigned clients count
-  const { data: trainerClientsData, isLoading: isLoadingClients, error: clientsError } = useTrainerClients();
+
 
   // Update trainer data when profile is loaded
   useEffect(() => {
-    setIsLoading(isLoadingTrainer);
-    
-    if (trainerError) {
-      const err = trainerError as Error;
+    setIsLoading(isLoadingTrainer || isLoadingDashboard || isLoadingClients);
+    if (trainerError || dashboardError || clientsError) {
+      const err = (trainerError || dashboardError || clientsError) as Error;
       setError(err.message);
-      
-      // Handle special case when navigating too soon during registration
       if (err.message.includes('401') || err.message.includes('unauthorized')) {
         const navigateBackToAuth = () => {
           console.log('Redirecting back to trainer login due to auth issues...');
@@ -94,29 +133,12 @@ const TrainerHome: React.FC = () => {
         setTimeout(navigateBackToAuth, 2000);
       }
     }
-    
-    // Update stats with API data and mocks as appropriate
     setStats({
       clientsCount: trainerClientsData?.count || 0,
       mealLogsCount: trainerProfileData?.mealLogs || 0,
       appointmentsCount: appointmentsData?.appointments?.length || 0
     });
-  }, [trainerProfileData, isLoadingTrainer, trainerError, user, navigate]);;
-
-  // Update filtered appointments when appointments data changes
-  useEffect(() => {
-    setIsLoading(isLoadingAppointments);
-    
-    if (appointmentsError) {
-      setError((appointmentsError as Error).message);
-    }
-    
-    if (appointmentsData?.appointments) {
-      // API already filters the appointments based on the query params
-      // So we can just use the data directly
-      setFilteredAppointments(appointmentsData.appointments);
-    }
-  }, [appointmentsData, isLoadingAppointments, appointmentsError]);
+  }, [trainerProfileData, isLoadingTrainer, trainerError, user, navigate, dashboardData, isLoadingDashboard, dashboardError, trainerClientsData, isLoadingClients, clientsError, appointmentsData]);
 
   // Function to scroll to the active package type
   const scrollToActiveTab = () => {
@@ -375,20 +397,20 @@ const TrainerHome: React.FC = () => {
               className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide" 
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {packageTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  data-id={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-md text-center text-sm font-medium transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-[#262012] text-white' 
-                      : 'bg-white border-2 border-gray-300 text-gray-800 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.title}
-                </button>
-              ))}
+            {packageTabs.map((tab) => (
+              <button
+                key={tab.id}
+                data-id={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-shrink-0 px-4 py-2 rounded-md text-center text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-[#262012] text-white' 
+                    : 'bg-white border-2 border-gray-300 text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                {tab.title}
+              </button>
+            ))}
             </div>
           </div>
           
@@ -399,12 +421,12 @@ const TrainerHome: React.FC = () => {
                 <h3 className="font-semibold text-gray-900 text-lg poppins-medium">Today's Appointments</h3>
                 <p className="text-sm text-gray-500 poppins-regular">appointments scheduled today</p>
               </div>
-              {isLoading ? (
+              {isLoadingDashboard ? (
                 <div className="h-12 w-12 bg-gray-200 rounded animate-pulse"></div>
               ) : (
                 <div className="text-right">
                   <div className="text-3xl font-bold text-gray-900 ddc-hardware">
-                    {filteredAppointments.length.toString().padStart(2, '0')}
+                    {getAppointmentsForTab().length.toString().padStart(2, '0')}
                   </div>
                 </div>
               )}
@@ -422,60 +444,52 @@ const TrainerHome: React.FC = () => {
               </div>
             )}
 
-            {isLoading ? (
+            {isLoadingDashboard ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-10 w-10 text-yellow-500 animate-spin" />
+              </div>
+            ) : getAppointmentsForTab().length === 0 ? (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-600 font-medium">No Appointments</p>
               </div>
             ) : (
               <div className="h-96 overflow-y-auto scrollbar-hide">
                 <div className="space-y-4 mt-2">
-                  {filteredAppointments.length === 0 ? (
-                    <div className="text-center py-16 bg-gray-50 rounded-lg">
-                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-600 font-medium">No appointments match the selected filter</p>
-                      <button 
-                        className="mt-3 text-sm text-yellow-600 underline"
-                        onClick={() => setActiveTab('all')}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+                    {getAppointmentsForTab().map((appointment: any) => (
+                      <div 
+                        key={appointment.id} 
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                       >
-                        View all appointments
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                      {filteredAppointments.map((appointment) => (
-                        <div 
-                          key={appointment.id} 
-                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-center">
-                            <div className="w-14 h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md mr-4">
-                              <span className="text-sm font-bold">{format(new Date(appointment.date), 'dd')}</span>
-                              <span className="text-xs">{format(new Date(appointment.date), 'MMM')}</span>
-                            </div>
-                            <div>
-                              <div className="flex items-center">
-                                <div className="h-6 w-6 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs mr-2">
-                                  <Users className="h-3 w-3" />
-                                </div>
-                                <p className="text-base font-bold">{appointment.clientName}</p>
-                              </div>
-                              <p className="text-xs text-gray-500">Appointment {appointment.appointmentNumber}</p>
-                              <span 
-                                className={`inline-block mt-2 text-white text-xs py-1 px-2 rounded ${
-                                  appointment.type === 'EXERCISE' ? 'bg-yellow-500' :
-                                  appointment.type === 'NUTRITION' ? 'bg-green-500' :
-                                  'bg-blue-500'
-                                }`}
-                              >
-                                {appointment.type}
-                              </span>
-                            </div>
+                        <div className="flex items-center">
+                          <div className="w-14 h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md mr-4">
+                            <span className="text-sm font-bold">{format(new Date(appointment.scheduled_at), 'dd')}</span>
+                            <span className="text-xs">{format(new Date(appointment.scheduled_at), 'MMM')}</span>
                           </div>
-                          <ChevronRight className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <div className="flex items-center">
+                              <div className="h-6 w-6 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs mr-2">
+                                <Users className="h-3 w-3" />
+                              </div>
+                              <p className="text-base font-bold">{appointment.user_name || 'Client'}</p>
+                            </div>
+                            <p className="text-xs text-gray-500">Appointment</p>
+                            <span 
+                              className={`inline-block mt-2 text-white text-xs py-1 px-2 rounded ${
+                                appointment.session_type === 'EXERCISE' ? 'bg-yellow-500' :
+                                appointment.session_type === 'NUTRITION' ? 'bg-green-500' :
+                                'bg-blue-500'
+                              }`}
+                            >
+                              {appointment.session_type}
+                            </span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

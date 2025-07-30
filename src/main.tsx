@@ -17,6 +17,7 @@ import AssignedClients from './screens/trainerScreens/assignedClients'
 import ViewClient from './screens/trainerScreens/viewClient'
 import ClientSchedulePage from './screens/trainerScreens/clientSchedulePage'
 import ModifyPlan from './screens/trainerScreens/modifyPlan'
+import ClientAssessment from './screens/trainerScreens/clientAssessment'
 
 // Import navigation
 import Navigation from './components/ui/Navigation'
@@ -80,6 +81,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ModifyPlan />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/trainer/client-assessment" 
+            element={
+              <ProtectedRoute>
+                <ClientAssessment />
               </ProtectedRoute>
             } 
           />

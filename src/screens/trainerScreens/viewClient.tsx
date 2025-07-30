@@ -5,36 +5,24 @@ import { format } from 'date-fns';
 import '../../components/ui/scrollbar-hide.css';
 
 
-import { useTrainerClients } from '../../hooks/useTrainerClients';
 
-// Mock appointments data
-const mockAppointments = {
-  upcoming: [
-    {
-      id: 'apt-001',
-      date: new Date(),
-      appointmentNumber: 2,
-      type: 'EXERCISE',
-      status: 'upcoming'
-    }
-  ],
-  completed: [
-    {
-      id: 'apt-002',
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-      appointmentNumber: 2,
-      type: 'EXERCISE',
-      status: 'completed'
-    },
-    {
-      id: 'apt-003',
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      appointmentNumber: 2,
-      type: 'EXERCISE',
-      status: 'completed'
-    }
-  ]
+import { useTrainerClients } from '../../hooks/useTrainerClients';
+import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
+
+type AssessmentAppointment = {
+  id: string;
+  user_id: string;
+  scheduled_at: string;
+  session_type: string;
+  status: string;
+  assessment_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  user_name: string;
+  user_email: string;
+  user_phone: string;
 };
+
 
 const ViewClient: React.FC = () => {
   const navigate = useNavigate();
@@ -44,13 +32,54 @@ const ViewClient: React.FC = () => {
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [isBookAppointmentModalOpen, setIsBookAppointmentModalOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  
+
+  // Dashboard data for assessment appointments (must be inside component)
+  const { data: dashboardData, isLoading: dashboardLoading } = useTrainerDashboard();
+
+  // Fetch all clients and find the one matching clientId
+  const { data } = useTrainerClients();
+  const client = data?.clients.find(c => c.id === clientId);
+
+  // Filter assessment appointments for this client by user_id
+  const assessmentAppointments: AssessmentAppointment[] = (dashboardData?.assessment_appointments || []).filter(
+    (apt: AssessmentAppointment) => apt.user_id === client?.user_id
+  );
+  // Debug: log clientId, client?.user_id, and filtered appointments
+  // Remove this after debugging
+  console.log('clientId:', clientId);
+  console.log('client?.user_id:', client?.user_id);
+  console.log('assessmentAppointments:', assessmentAppointments);
+
+  // Split into upcoming and completed (compare only UTC date, ignore time)
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const upcomingAppointments: AssessmentAppointment[] = assessmentAppointments.filter(
+    (apt: AssessmentAppointment) => {
+      const aptDate = new Date(apt.scheduled_at);
+      const aptDayUTC = Date.UTC(aptDate.getUTCFullYear(), aptDate.getUTCMonth(), aptDate.getUTCDate());
+      return aptDayUTC >= todayUTC;
+    }
+  ).sort((a: AssessmentAppointment, b: AssessmentAppointment) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  const completedAppointments: AssessmentAppointment[] = assessmentAppointments.filter(
+    (apt: AssessmentAppointment) => {
+      const aptDate = new Date(apt.scheduled_at);
+      const aptDayUTC = Date.UTC(aptDate.getUTCFullYear(), aptDate.getUTCMonth(), aptDate.getUTCDate());
+      return aptDayUTC < todayUTC;
+    }
+  ).sort((a: AssessmentAppointment, b: AssessmentAppointment) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+
   // Booking state
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [bookedAppointment, setBookedAppointment] = useState<{date: string, time: string} | null>(null);
+
+  // Appointment details modal state
+
+  const handleAppointmentPage = (appointment: any) => {
+    navigate('/trainer/client-assessment', { state: { appointment } });
+  };
 
   // Generate available dates for the current month
   const generateAvailableDates = () => {
@@ -101,9 +130,7 @@ const ViewClient: React.FC = () => {
   ];
 
 
-  // Fetch all clients and find the one matching clientId
-  const { data, isLoading, error } = useTrainerClients();
-  const client = data?.clients.find(c => c.id === clientId);
+  // ...existing code...
 
   const handleBackPress = () => {
     navigate('/trainer/assigned-clients');
@@ -344,23 +371,31 @@ const ViewClient: React.FC = () => {
                       <div>
                         <h4 className="text-sm lg:text-base font-medium text-gray-600 mb-3 lg:mb-4 poppins-medium">Upcoming</h4>
                         <div className="space-y-3 lg:space-y-4">
-                          {mockAppointments.upcoming.map((appointment) => (
-                            <div key={appointment.id} className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                          {dashboardLoading ? (
+                            <div className="text-gray-400">Loading...</div>
+                          ) : upcomingAppointments.length === 0 ? (
+                            <div className="text-gray-400">No upcoming appointments</div>
+                          ) : upcomingAppointments.map((appointment, idx) => (
+                            <div
+                              key={appointment.id}
+                              className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleAppointmentPage(appointment)}
+                            >
                               <div className="flex items-center space-x-4">
                                 <div className="w-12 h-14 lg:w-16 lg:h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md">
                                   <span className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
-                                    {format(appointment.date, 'dd')}
+                                    {format(new Date(appointment.scheduled_at), 'dd')}
                                   </span>
                                   <span className="text-xs text-gray-600">
-                                    {format(appointment.date, 'MMM')}
+                                    {format(new Date(appointment.scheduled_at), 'MMM')}
                                   </span>
                                 </div>
                                 <div>
                                   <p className="font-medium text-gray-900 poppins-medium">
-                                    Appointment {appointment.appointmentNumber}
+                                    Appointment {idx + 1}
                                   </p>
                                   <span className="inline-block mt-1 bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded">
-                                    {appointment.type}
+                                    {appointment.session_type}
                                   </span>
                                 </div>
                               </div>
@@ -374,23 +409,31 @@ const ViewClient: React.FC = () => {
                       <div>
                         <h4 className="text-sm lg:text-base font-medium text-gray-600 mb-3 lg:mb-4 poppins-medium">Completed</h4>
                         <div className="space-y-3 lg:space-y-4">
-                          {mockAppointments.completed.map((appointment) => (
-                            <div key={appointment.id} className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                          {dashboardLoading ? (
+                            <div className="text-gray-400">Loading...</div>
+                          ) : completedAppointments.length === 0 ? (
+                            <div className="text-gray-400">No completed appointments</div>
+                          ) : completedAppointments.map((appointment, idx) => (
+                            <div
+                              key={appointment.id}
+                              className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handleAppointmentPage(appointment)}
+                            >
                               <div className="flex items-center space-x-4">
                                 <div className="w-12 h-14 lg:w-16 lg:h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md">
                                   <span className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
-                                    {format(appointment.date, 'dd')}
+                                    {format(new Date(appointment.scheduled_at), 'dd')}
                                   </span>
                                   <span className="text-xs text-gray-600">
-                                    {format(appointment.date, 'MMM')}
+                                    {format(new Date(appointment.scheduled_at), 'MMM')}
                                   </span>
                                 </div>
                                 <div>
                                   <p className="font-medium text-gray-900 poppins-medium">
-                                    Appointment {appointment.appointmentNumber}
+                                    Appointment {idx + 1}
                                   </p>
                                   <span className="inline-block mt-1 bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded">
-                                    {appointment.type}
+                                    {appointment.session_type}
                                   </span>
                                 </div>
                               </div>
