@@ -26,7 +26,7 @@ const api = axios.create({
 // Import session service and firebase auth
 import sessionService from './sessionService';
 import { auth } from './firebase';
-import type { Appointment } from '../hooks/useTrainer';
+
 
 api.interceptors.request.use(
   async (config) => {

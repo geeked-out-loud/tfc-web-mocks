@@ -20,7 +20,6 @@ const TrainerHome: React.FC = () => {
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
   
@@ -40,20 +39,7 @@ const TrainerHome: React.FC = () => {
     { id: 'nutrition', title: 'Nutrition' }
   ];
 
-  // Helper to get count for each tab from dashboardData
-  const getTabCount = (tabId: string): number => {
-    if (!dashboardData || !dashboardData.clients_by_category) return 0;
-    if (tabId === 'all') {
-      // Sum all categories
-      return dashboardData.clients_by_category.reduce((sum: number, cat: any) => sum + (cat.count || 0), 0);
-    }
-    // Find the category by id (case-insensitive match)
-    const found = dashboardData.clients_by_category.find((cat: any) =>
-      (cat.category || '').toLowerCase() === tabId.toLowerCase()
-    );
-    return found?.count || 0;
-  };
-  
+ 
   // Appointments to display for the selected tab, filtered by tab/category
   const getAppointmentsForTab = (): any[] => {
     if (!dashboardData || !dashboardData.today_appointments) return [];
@@ -95,8 +81,6 @@ const TrainerHome: React.FC = () => {
   // Use the trainer appointments hook with filters based on activeTab
   const { 
     data: appointmentsData, 
-    isLoading: isLoadingAppointments,
-    error: appointmentsError
   } = useTrainerAppointments(
     activeTab !== 'all' ? {
       sessionType: (
@@ -120,17 +104,15 @@ const TrainerHome: React.FC = () => {
 
   // Update trainer data when profile is loaded
   useEffect(() => {
-    setIsLoading(isLoadingTrainer || isLoadingDashboard || isLoadingClients);
-    if (trainerError || dashboardError || clientsError) {
-      const err = (trainerError || dashboardError || clientsError) as Error;
-      setError(err.message);
-      if (err.message.includes('401') || err.message.includes('unauthorized')) {
-        const navigateBackToAuth = () => {
-          console.log('Redirecting back to trainer login due to auth issues...');
-          navigate('/trainer/login');
-        };
-        setTimeout(navigateBackToAuth, 2000);
-      }
+    // setIsLoading(isLoadingTrainer || isLoadingDashboard || isLoadingClients);
+    const err = (trainerError || dashboardError || clientsError) as Error;
+    setError(err.message);
+    if (err.message.includes('401') || err.message.includes('unauthorized')) {
+      const navigateBackToAuth = () => {
+        console.log('Redirecting back to trainer login due to auth issues...');
+        navigate('/trainer/login');
+      };
+      setTimeout(navigateBackToAuth, 2000);
     }
     setStats({
       clientsCount: trainerClientsData?.count || 0,

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, } from 'react-router-dom';
 import { X } from 'lucide-react';
 
 // to be replace with real data from appointment/assessment
@@ -39,10 +39,6 @@ const initialMessages = [
 
 const ClientAssessment: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  // Get appointment data from location.state if passed from previous page
-  const { appointment } = location.state || {};
-  const { clientId } = useParams();
 
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
@@ -58,7 +54,7 @@ const ClientAssessment: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
   };
-  
+
   const handleClose = () => {
     navigate(-1); // Go back to previous screen
   };
