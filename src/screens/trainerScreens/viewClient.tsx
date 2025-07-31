@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, MoreVertical, ChevronRight, Users, Calendar, Edit, Clock, ChevronLeft, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import '../../components/ui/scrollbar-hide.css';
-
-
 
 import { useTrainerClients } from '../../hooks/useTrainerClients';
 import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
+import { apiService } from '../../services/api';
+
 
 type AssessmentAppointment = {
   id: string;
@@ -32,6 +32,8 @@ const ViewClient: React.FC = () => {
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [isBookAppointmentModalOpen, setIsBookAppointmentModalOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [latestAppointment, setLatestAppointment] = useState<any | null>(null);
+  const [appointmentType, setAppointmentType] = useState<'TRAINING' | 'NUTRITION'>('TRAINING');
 
   // Dashboard data for assessment appointments (must be inside component)
   const { data: dashboardData, isLoading: dashboardLoading } = useTrainerDashboard();
@@ -73,7 +75,7 @@ const ViewClient: React.FC = () => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [bookedAppointment, setBookedAppointment] = useState<{date: string, time: string} | null>(null);
+  const [bookedAppointment, setBookedAppointment] = useState<{ date: string, time: string } | null>(null);
 
   // Appointment details modal state
 
@@ -86,7 +88,7 @@ const ViewClient: React.FC = () => {
     const dates = [];
     const today = new Date();
     const currentDate = new Date(currentYear, currentMonth, 1);
-    
+
     // Find the first available date (today or later in the selected month)
     let startDate;
     if (currentYear === today.getFullYear() && currentMonth === today.getMonth()) {
@@ -96,10 +98,10 @@ const ViewClient: React.FC = () => {
     } else {
       return []; // Past month, no available dates
     }
-    
+
     // Get the last day of the current month
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    
+
     // Generate all dates from startDate to end of month
     for (let day = startDate; day <= lastDayOfMonth; day++) {
       const date = new Date(currentYear, currentMonth, day);
@@ -118,7 +120,7 @@ const ViewClient: React.FC = () => {
   // Time slots with proper formatting
   const timeSlots = [
     '3:30 PM',
-    '5:30 PM', 
+    '5:30 PM',
     '6:30 PM',
     '8:30 PM',
     '10:30 PM'
@@ -156,22 +158,103 @@ const ViewClient: React.FC = () => {
     setBookedAppointment(null);
   };
 
-  const handleBookSession = () => {
-    if (selectedDate && selectedTime) {
-      // Store the booked appointment details
-      setBookedAppointment({
-        date: format(selectedDate, 'do MMMM yyyy'),
-        time: selectedTime
+  function formatWithOffset(date: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+
+    const offsetMinutes = date.getTimezoneOffset();
+    const absOffset = Math.abs(offsetMinutes);
+    const offsetHours = pad(Math.floor(absOffset / 60));
+    const offsetMins = pad(absOffset % 60);
+    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMins}`;
+  }
+
+
+  const membershipId = "65d7ded6-bb5f-43f6-a531-63f555775d96"// Replace with actual membership ID logic
+
+
+
+  const handleBookSession = async () => {
+    if (!selectedDate || !selectedTime || !membershipId || !appointmentType) {
+      alert('Please fill all fields before booking');
+      return;
+    }
+
+    console.log("Selected Date:", selectedDate);
+    console.log("Is valid date:", selectedDate instanceof Date, !isNaN(new Date(selectedDate).getTime()));
+    console.log("Selected Time:", selectedTime);
+
+    try {
+      // Parse date
+      const baseDate = typeof selectedDate === 'string' ? new Date(selectedDate) : selectedDate;
+
+      if (!(baseDate instanceof Date) || isNaN(baseDate.getTime())) {
+        throw new Error('Invalid date');
+      }
+
+      // Parse time string
+      const timeParts = selectedTime.split(':');
+      if (timeParts.length !== 2) throw new Error('Time must be in HH:mm format');
+
+      const [hoursStr, minutesStr] = timeParts;
+      const hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+
+      if (isNaN(hours) || isNaN(minutes)) {
+        throw new Error('Invalid time input');
+      }
+
+      // Combine date + time
+      const fullDateTime = new Date(baseDate);
+      fullDateTime.setHours(hours, minutes, 0, 0);
+
+      if (isNaN(fullDateTime.getTime())) {
+        throw new Error('Invalid combined datetime');
+      }
+
+      console.log('✅ Final full datetime (local):', fullDateTime);
+      console.log('✅ Final datetime (RFC3339 w/ timezone):', formatWithOffset(fullDateTime));
+
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('membership_id', membershipId);
+      formData.append('scheduled_at', formatWithOffset(fullDateTime)); // returns 2025-07-21T20:00:00+05:30
+      formData.append('appointment_type', appointmentType);
+
+      console.log('📤 Submitting appointment:', {
+        membershipId,
+        scheduledAt: formatWithOffset(fullDateTime),
+        appointmentType,
       });
-      
-      // Show confirmation within the same modal
+
+      const response = await apiService.trainer.addAppointment(formData);
+      console.log('✅ Appointment booked:', response.data);
+
+      // UI updates
+      setBookedAppointment({
+        date: format(fullDateTime, 'do MMMM yyyy'),
+        time: selectedTime,
+      });
       setShowConfirmation(true);
-      
-      // Reset selection for next booking
       setSelectedDate(null);
       setSelectedTime(null);
+    } catch (error: any) {
+      console.error('❌ Booking failed:', error);
+      alert(error.message || 'Failed to book appointment');
     }
   };
+
+
+
+
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -203,6 +286,26 @@ const ViewClient: React.FC = () => {
     navigate(`/trainer/client/${clientId}/modify-plan`);
   };
 
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const data = await apiService.trainer.getUpcomingAppointments();
+        console.log("Upcoming appointments data:", data);
+        // If data is an array, get the first one (upcoming)
+        setLatestAppointment(data);
+      } catch (err) {
+        console.error("Failed to load upcoming appointments", err);
+        setLatestAppointment(null); // not an array
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  useEffect(() => {
+    console.log("Latest appointment changed:", latestAppointment);
+  }, [latestAppointment]);
+
   return (
     <div className="min-h-screen lg:h-screen bg-gray-50 lg:overflow-hidden">
       {/* Responsive Container */}
@@ -210,7 +313,7 @@ const ViewClient: React.FC = () => {
         {/* Top Navigation */}
         <div className="bg-white flex items-center justify-between p-4 lg:p-6 border-b border-gray-200 lg:flex-shrink-0">
           <div className="flex items-center space-x-4">
-            <button 
+            <button
               onClick={handleBackPress}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               aria-label="Go back"
@@ -249,10 +352,10 @@ const ViewClient: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Action Buttons - Desktop */}
                 <div className="hidden lg:flex flex-col space-y-2">
-                  <button 
+                  <button
                     onClick={handleScheduleClick}
                     className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-100 transition-colors flex items-center space-x-2"
                   >
@@ -263,7 +366,7 @@ const ViewClient: React.FC = () => {
 
                 {/* Action Buttons - Mobile */}
                 <div className="flex items-center space-x-2 lg:hidden">
-                  <button 
+                  <button
                     onClick={handleScheduleClick}
                     className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-100 transition-colors flex items-center space-x-2"
                   >
@@ -287,8 +390,8 @@ const ViewClient: React.FC = () => {
             {/* Physical Live Sessions Card */}
             <div className="bg-white rounded-lg overflow-hidden shadow-sm lg:border lg:border-gray-200 mx-4 lg:mx-0 flex-shrink-0">
               <div className="relative h-32 lg:h-40 bg-gradient-to-r from-blue-600 to-blue-800">
-                <img 
-                  src="/exercise.jpg" 
+                <img
+                  src="/exercise.jpg"
                   alt="Physical Live Sessions"
                   className="w-full h-full object-cover"
                 />
@@ -299,7 +402,7 @@ const ViewClient: React.FC = () => {
                 </div>
               </div>
               <div className="p-4 lg:p-6">
-                <button 
+                <button
                   onClick={handlePlanCardClick}
                   className="w-full flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
                 >
@@ -327,21 +430,19 @@ const ViewClient: React.FC = () => {
               <div className="flex border-b border-gray-200 flex-shrink-0">
                 <button
                   onClick={() => setActiveTab('appointment')}
-                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
-                    activeTab === 'appointment'
-                      ? 'text-gray-900 border-b-2 border-yellow-500 bg-yellow-50'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${activeTab === 'appointment'
+                    ? 'text-gray-900 border-b-2 border-yellow-500 bg-yellow-50'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
                 >
                   APPOINTMENT
                 </button>
                 <button
                   onClick={() => setActiveTab('gallery')}
-                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
-                    activeTab === 'gallery'
-                      ? 'text-gray-900 border-b-2 border-yellow-500 bg-yellow-50'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${activeTab === 'gallery'
+                    ? 'text-gray-900 border-b-2 border-yellow-500 bg-yellow-50'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
                 >
                   GALLERY
                 </button>
@@ -350,115 +451,125 @@ const ViewClient: React.FC = () => {
               {/* Tab Content */}
               <div className="lg:flex-1 lg:overflow-hidden">
                 <div className="p-4 lg:p-6 lg:h-full">
-                {activeTab === 'appointment' ? (
-                  <div className="max-h-96 lg:h-full overflow-y-auto scrollbar-hide">
-                    <div className="space-y-4 lg:space-y-6 pr-2 pb-20 lg:pb-0">
-                      {/* User Assessment */}
-                      <button 
-                        onClick={handleAssessmentClick}
-                        className="w-full flex bg-[#FDFAF0] items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="h-8 w-8 lg:h-10 lg:w-10 bg-gray-900 rounded flex items-center justify-center">
-                            <Users className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
-                          </div>
-                          <span className="font-medium text-gray-900 poppins-medium">User Assessment</span>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-[#D7A900]" />
-                      </button>
-
-                      {/* Upcoming Section */}
-                      <div>
-                        <h4 className="text-sm lg:text-base font-medium text-gray-600 mb-3 lg:mb-4 poppins-medium">Upcoming</h4>
-                        <div className="space-y-3 lg:space-y-4">
-                          {dashboardLoading ? (
-                            <div className="text-gray-400">Loading...</div>
-                          ) : upcomingAppointments.length === 0 ? (
-                            <div className="text-gray-400">No upcoming appointments</div>
-                          ) : upcomingAppointments.map((appointment, idx) => (
-                            <div
-                              key={appointment.id}
-                              className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => handleAppointmentPage(appointment)}
-                            >
-                              <div className="flex items-center space-x-4">
-                                <div className="w-12 h-14 lg:w-16 lg:h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md">
-                                  <span className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
-                                    {format(new Date(appointment.scheduled_at), 'dd')}
-                                  </span>
-                                  <span className="text-xs text-gray-600">
-                                    {format(new Date(appointment.scheduled_at), 'MMM')}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900 poppins-medium">
-                                    Appointment {idx + 1}
-                                  </p>
-                                  <span className="inline-block mt-1 bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded">
-                                    {appointment.session_type}
-                                  </span>
-                                </div>
-                              </div>
-                              <ChevronRight className="h-5 w-5 text-gray-400" />
+                  {activeTab === 'appointment' ? (
+                    <div className="max-h-96 lg:h-full overflow-y-auto scrollbar-hide">
+                      <div className="space-y-4 lg:space-y-6 pr-2 pb-20 lg:pb-0">
+                        {/* User Assessment */}
+                        <button
+                          onClick={handleAssessmentClick}
+                          className="w-full flex bg-[#FDFAF0] items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 lg:h-10 lg:w-10 bg-gray-900 rounded flex items-center justify-center">
+                              <Users className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
                             </div>
-                          ))}
+                            <span className="font-medium text-gray-900 poppins-medium">User Assessment</span>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-[#D7A900]" />
+                        </button>
+
+                        {/* Upcoming Section */}
+
+                        <div>
+                          <h4 className="text-sm lg:text-base font-medium text-gray-600 mb-3 lg:mb-4 poppins-medium">
+                            Upcoming
+                          </h4>
+                          <div className="space-y-3 lg:space-y-4">
+                            {dashboardLoading ? (
+                              <div className="text-gray-400">Loading...</div>
+                            ) : !latestAppointment || !latestAppointment.scheduled_at ? (
+                              <div className="text-gray-400">No upcoming appointments</div>
+                            ) : (
+                              <div
+                                className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => handleAppointmentPage(latestAppointment)}
+                              >
+                                <div className="flex items-center space-x-4">
+                                  <div className="w-12 h-14 lg:w-16 lg:h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md">
+                                    {latestAppointment?.scheduled_at && isValid(new Date(latestAppointment.scheduled_at)) ? (
+                                      <>
+                                        <span className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
+                                          {format(new Date(latestAppointment.scheduled_at), 'dd')}
+                                        </span>
+                                        <span className="text-xs text-gray-600">
+                                          {format(new Date(latestAppointment.scheduled_at), 'MMM')}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-lg lg:text-xl font-bold text-gray-400">--</span>
+                                        <span className="text-xs text-gray-400">--</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900 poppins-medium">Appointment 1</p>
+                                    <span className="inline-block mt-1 bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded">
+                                      {latestAppointment.appointment_type}
+                                    </span>
+                                  </div>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                              </div>
+                            )}
+
+                          </div>
+                        </div>
+
+                        {/* Completed Section */}
+                        <div>
+                          <h4 className="text-sm lg:text-base font-medium text-gray-600 mb-3 lg:mb-4 poppins-medium">Completed</h4>
+                          <div className="space-y-3 lg:space-y-4">
+                            {dashboardLoading ? (
+                              <div className="text-gray-400">Loading...</div>
+                            ) : completedAppointments.length === 0 ? (
+                              <div className="text-gray-400">No completed appointments</div>
+                            ) : completedAppointments.map((appointment, idx) => (
+                              <div
+                                key={appointment.id}
+                                className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => handleAppointmentPage(appointment)}
+                              >
+                                <div className="flex items-center space-x-4">
+                                  <div className="w-12 h-14 lg:w-16 lg:h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md">
+                                    <span className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
+                                      {format(new Date(appointment.scheduled_at), 'dd')}
+                                    </span>
+                                    <span className="text-xs text-gray-600">
+                                      {format(new Date(appointment.scheduled_at), 'MMM')}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900 poppins-medium">
+                                      Appointment {idx + 1}
+                                    </p>
+                                    <span className="inline-block mt-1 bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded">
+                                      {appointment.session_type}
+                                    </span>
+                                  </div>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-
-                      {/* Completed Section */}
-                      <div>
-                        <h4 className="text-sm lg:text-base font-medium text-gray-600 mb-3 lg:mb-4 poppins-medium">Completed</h4>
-                        <div className="space-y-3 lg:space-y-4">
-                          {dashboardLoading ? (
-                            <div className="text-gray-400">Loading...</div>
-                          ) : completedAppointments.length === 0 ? (
-                            <div className="text-gray-400">No completed appointments</div>
-                          ) : completedAppointments.map((appointment, idx) => (
-                            <div
-                              key={appointment.id}
-                              className="flex items-center justify-between p-3 lg:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => handleAppointmentPage(appointment)}
-                            >
-                              <div className="flex items-center space-x-4">
-                                <div className="w-12 h-14 lg:w-16 lg:h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md">
-                                  <span className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
-                                    {format(new Date(appointment.scheduled_at), 'dd')}
-                                  </span>
-                                  <span className="text-xs text-gray-600">
-                                    {format(new Date(appointment.scheduled_at), 'MMM')}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900 poppins-medium">
-                                    Appointment {idx + 1}
-                                  </p>
-                                  <span className="inline-block mt-1 bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded">
-                                    {appointment.session_type}
-                                  </span>
-                                </div>
-                              </div>
-                              <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
+                  ) : (
+                    <div className="max-h-96 lg:h-full overflow-y-auto scrollbar-hide">
+                      <div className="text-center py-12 lg:py-16 pr-2 pb-20 lg:pb-0">
+                        <p className="text-gray-500 poppins-regular lg:text-lg">Gallery content will be displayed here</p>
+                        {/* Mock gallery items for demonstration */}
+                        <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <div key={i} className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+                              <span className="text-gray-400 text-sm">Photo {i + 1}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="max-h-96 lg:h-full overflow-y-auto scrollbar-hide">
-                    <div className="text-center py-12 lg:py-16 pr-2 pb-20 lg:pb-0">
-                      <p className="text-gray-500 poppins-regular lg:text-lg">Gallery content will be displayed here</p>
-                      {/* Mock gallery items for demonstration */}
-                      <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <div key={i} className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-                            <span className="text-gray-400 text-sm">Photo {i + 1}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
                 </div>
               </div>
             </div>
@@ -480,11 +591,11 @@ const ViewClient: React.FC = () => {
       {isPlanModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black bg-opacity-50"
             onClick={() => setIsPlanModalOpen(false)}
           />
-          
+
           {/* Modal Content */}
           <div className="relative bg-white w-full max-w-md rounded-t-3xl animate-slide-up-enter overflow-hidden">
             {/* Header */}
@@ -496,8 +607,8 @@ const ViewClient: React.FC = () => {
             <div className="p-4">
               <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
                 <div className="relative h-24 bg-gradient-to-r from-blue-600 to-blue-800">
-                  <img 
-                    src="/exercise.jpg" 
+                  <img
+                    src="/exercise.jpg"
                     alt="Physical Live Sessions"
                     className="w-full h-full object-cover"
                   />
@@ -545,7 +656,7 @@ const ViewClient: React.FC = () => {
 
             {/* Modify Plan Button */}
             <div className="px-4 pb-6">
-              <button 
+              <button
                 onClick={handleModifyPlanClick}
                 className="w-full border border-gray-300 text-gray-900 py-3 rounded-lg font-bold text-center hover:bg-gray-50 transition-colors ddc-hardware flex items-center justify-center space-x-2"
               >
@@ -561,7 +672,7 @@ const ViewClient: React.FC = () => {
       {isAssessmentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black bg-opacity-50"
             onClick={() => setIsAssessmentModalOpen(false)}
           />
@@ -608,11 +719,11 @@ const ViewClient: React.FC = () => {
       {isBookAppointmentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black bg-opacity-50"
             onClick={handleCloseBookingModal}
           />
-          
+
           {/* Modal Content */}
           <div className="relative bg-white w-full max-w-md rounded-t-3xl animate-slide-up-enter overflow-hidden">
             {!showConfirmation ? (
@@ -644,27 +755,26 @@ const ViewClient: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Date buttons - Horizontal scroll */}
                     <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2">
                       {availableDates.map((dateObj) => (
                         <button
                           key={dateObj.date.getTime()}
                           onClick={() => setSelectedDate(dateObj.date)}
-                          className={`relative flex-shrink-0 py-4 px-3 text-center transition-colors min-w-[60px] ${
-                            selectedDate && selectedDate.getTime() === dateObj.date.getTime()
-                              ? 'text-gray-900'
-                              : 'text-gray-400 hover:text-gray-600'
-                          }`}
+                          className={`relative flex-shrink-0 py-4 px-3 text-center transition-colors min-w-[60px] ${selectedDate && selectedDate.getTime() === dateObj.date.getTime()
+                            ? 'text-gray-900'
+                            : 'text-gray-400 hover:text-gray-600'
+                            }`}
                         >
                           {/* Top golden bar for selected date */}
                           {selectedDate && selectedDate.getTime() === dateObj.date.getTime() && (
                             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-yellow-500 rounded-full"></div>
                           )}
-                          
+
                           <div className="text-2xl font-bold mb-1">{dateObj.day}</div>
                           <div className="text-sm">{dateObj.dayName}</div>
-                          
+
                           {/* Bottom golden bar for selected date */}
                           {selectedDate && selectedDate.getTime() === dateObj.date.getTime() && (
                             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-yellow-500 rounded-full"></div>
@@ -674,37 +784,57 @@ const ViewClient: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Select appointment type */}
+
+                  <div className="mb-8">
+                    <label className="block text-lg font-semibold text-gray-900 mb-2">
+                      Select appointment type
+                    </label>
+                    <select
+                      value={appointmentType}
+                      onChange={(e) => setAppointmentType(e.target.value as 'TRAINING' | 'NUTRITION')}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-700 bg-white"
+                    >
+                      <option disabled value="" className="text-gray-400">
+                        — Select a type —
+                      </option>
+                      <option value="NUTRITION" className="text-gray-800">
+                        Nutrition
+                      </option>
+                      <option value="TRAINING" className="text-gray-800">
+                        Training
+                      </option>
+                    </select>
+                  </div>
+
+
                   {/* Select time section */}
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-6">Select time</h3>
-                    
+
                     {/* Time slots in 2 columns grid */}
                     <div className="grid grid-cols-2 gap-4">
                       {timeSlots.map((time) => (
                         <button
                           key={time}
                           onClick={() => setSelectedTime(time)}
-                          className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                            selectedTime === time
-                              ? 'border-yellow-500 bg-yellow-50'
-                              : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                          className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${selectedTime === time
+                            ? 'border-yellow-500 bg-yellow-50'
+                            : 'border-gray-300 hover:border-gray-400'
+                            }`}
                         >
                           <div className="flex items-center">
-                            <Clock className={`w-5 h-5 mr-3 ${
-                              selectedTime === time ? 'text-yellow-600' : 'text-gray-500'
-                            }`} />
-                            <span className={`font-medium ${
-                              selectedTime === time ? 'text-gray-900' : 'text-gray-700'
-                            }`}>
+                            <Clock className={`w-5 h-5 mr-3 ${selectedTime === time ? 'text-yellow-600' : 'text-gray-500'
+                              }`} />
+                            <span className={`font-medium ${selectedTime === time ? 'text-gray-900' : 'text-gray-700'
+                              }`}>
                               {time}
                             </span>
                           </div>
-                          <div className={`w-5 h-5 rounded-full border-2 ${
-                            selectedTime === time
-                              ? 'border-yellow-500 bg-yellow-500'
-                              : 'border-gray-400'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 ${selectedTime === time
+                            ? 'border-yellow-500 bg-yellow-500'
+                            : 'border-gray-400'
+                            }`}>
                             {selectedTime === time && (
                               <div className="w-full h-full rounded-full bg-white scale-[0.4]" />
                             )}
@@ -718,11 +848,10 @@ const ViewClient: React.FC = () => {
                   <button
                     onClick={handleBookSession}
                     disabled={!selectedDate || !selectedTime}
-                    className={`w-full py-4 rounded-lg font-semibold text-center transition-colors ddc-hardware ${
-                      selectedDate && selectedTime
-                        ? 'bg-[#262012] text-white hover:bg-opacity-90'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
+                    className={`w-full py-4 rounded-lg font-semibold text-center transition-colors ddc-hardware ${selectedDate && selectedTime
+                      ? 'bg-[#262012] text-white hover:bg-opacity-90'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
                   >
                     BOOK SESSION
                   </button>
@@ -742,8 +871,8 @@ const ViewClient: React.FC = () => {
                 <div className="relative h-[600px]">
                   {/* Top Section with confirm.png image */}
                   <div className="h-[380px] relative overflow-hidden -mx-0">
-                    <img 
-                      src="/confirm.png" 
+                    <img
+                      src="/confirm.png"
                       alt="Confirmation"
                       className="w-full h-full object-cover"
                     />
@@ -758,13 +887,13 @@ const ViewClient: React.FC = () => {
                         <h2 className="text-xl font-bold text-gray-900 ddc-hardware mb-2">
                           ASSESSMENT BOOKED
                         </h2>
-                        
+
                         {/* Date */}
                         <p className="text-gray-600 text-base">
                           for {bookedAppointment.date} - {bookedAppointment.time}
                         </p>
                       </div>
-                      
+
                       {/* OK Button at bottom */}
                       <button
                         onClick={handleCloseBookingModal}

@@ -134,6 +134,12 @@ export interface Appointment {
   sessionType: 'physical' | 'online' | 'self';
 }
 
+export interface AppointmentRequest {
+  membershipId:string,
+  scheduledAt: string;
+  appointmentType: 'TRAINING' | 'NUTRITION';
+}
+
 export interface AppointmentsResponse {
   appointments: Appointment[];
   count: number;

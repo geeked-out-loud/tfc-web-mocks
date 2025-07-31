@@ -2,22 +2,49 @@ import React, { useState } from 'react';
 import { ArrowLeft, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../../components/ui/scrollbar-hide.css';
-import { useTrainerClients } from '../../hooks/useTrainerClients';
+import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 
 const AssignedClients: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  
+
 
   // Fetch clients from API
-  const { data, isLoading, error } = useTrainerClients();
-  const clients = data?.clients || [];
+  const { data, isLoading, error } = useTrainerDashboard();
+  interface Client {
+    id: string;
+    client_name: string;
+    client_email: string;
+    status: string;
+    is_active:boolean;
+    [key: string]: any;
+    package_category?: string;
+  }
+
+  interface ClientCategory {
+    package_category: string;
+    clients: Client[];
+  }
+
+  interface TrainerDashboardData {
+    clients_by_category?: ClientCategory[];
+    // Add other fields if present in API
+  }
+
+  const clients: Client[] = (data?.clients_by_category?.flatMap((cat: ClientCategory) =>
+    cat.clients.map((client: Client) => ({
+      ...client,
+      package_category: cat.package_category, // include the category for later use
+    }))
+  ) || []);
 
   // Filter clients based on search query (by user_name or id)
   const filteredClients = clients.filter(client =>
-    (client.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.id.includes(searchQuery))
+  (client.client_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    client.user_id?.includes(searchQuery))
   );
+
+  console.log('Filtered Clients:', filteredClients);
 
   const handleBackPress = () => {
     navigate('/trainer/dashboard');
@@ -34,7 +61,7 @@ const AssignedClients: React.FC = () => {
       <div className="max-w-7xl mx-auto min-h-screen bg-white shadow-lg lg:shadow-xl">
         {/* Header */}
         <header className="flex items-center p-4 lg:p-6 border-b border-gray-200">
-          <button 
+          <button
             onClick={handleBackPress}
             className="mr-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Go back"
@@ -49,7 +76,7 @@ const AssignedClients: React.FC = () => {
               Manage and view your assigned clients
             </p>
           </div>
-          
+
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-3">
             {/* Removed total client count */}
@@ -69,7 +96,7 @@ const AssignedClients: React.FC = () => {
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
               />
             </div>
-            
+
             {/* Removed mobile client count and filter options */}
           </div>
         </div>
@@ -94,13 +121,13 @@ const AssignedClients: React.FC = () => {
               <Users className="h-16 w-16 lg:h-20 lg:w-20 text-gray-300 mx-auto mb-6" />
               <h2 className="text-xl lg:text-2xl font-bold text-gray-600 mb-3">No clients found</h2>
               <p className="text-gray-500 text-base max-w-md mx-auto leading-relaxed">
-                {searchQuery 
-                  ? 'Try adjusting your search terms or check the spelling' 
+                {searchQuery
+                  ? 'Try adjusting your search terms or check the spelling'
                   : 'You have no assigned clients yet. New clients will appear here once assigned.'
                 }
               </p>
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   className="mt-4 px-4 py-2 text-sm text-yellow-600 hover:text-yellow-700 border border-yellow-200 hover:border-yellow-300 rounded-lg transition-colors"
                 >
@@ -162,21 +189,21 @@ const AssignedClients: React.FC = () => {
                           {/* Client Avatar */}
                           <div className="h-24 w-24 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                             <div className="h-full w-full flex items-center justify-center bg-gray-900 text-white text-xl font-bold ddc-hardware">
-                              {getInitials(client.user_name)}
+                              {getInitials(client.client_name)}
                             </div>
                           </div>
                           {/* Client Info */}
                           <div className="w-full space-y-3">
                             <h3 className="font-bold text-gray-900 ddc-hardware text-2xl mb-1 truncate">
-                              {client.user_name}
+                              {client.client_name}
                             </h3>
                             <p className="text-sm text-gray-500 poppins-regular mb-2 truncate">
-                              {client.user_email}
+                              {client.client_email}
                             </p>
                             <div className="flex justify-center">
                               <span className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-full border-2 bg-gray-50 text-gray-600 border-gray-200">
                                 <span className={`w-3 h-3 rounded-full mr-2 ${client.status === 'BOOKED' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                                {client.status || 'N/A'}
+                                {client.is_active || 'N/A'}
                               </span>
                             </div>
                           </div>
