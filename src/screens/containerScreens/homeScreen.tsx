@@ -7,7 +7,7 @@ import { useCachedPackages } from '../../hooks/useGlobalPackages'
 export default function HomeScreen() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   
-  // Use cached packages data (doesn't trigger fetch)
+  // Use cached packages data (doesn't trigger fetch).
   const { data: packagesData, isLoading, error, isError } = useCachedPackages();
   const packages = packagesData?.packages || [];
 
