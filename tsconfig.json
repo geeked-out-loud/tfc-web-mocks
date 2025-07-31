@@ -1,9 +1,4 @@
 {
-  //TODO: remove compilerOptions if Vercel still fails
-  "compilerOptions": {
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
-  },
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
