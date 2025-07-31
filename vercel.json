@@ -5,10 +5,13 @@
       "destination": "http://43.205.60.23/v1/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ],
+  "cleanUrls": true,
+  "trailingSlash": false,
+  
   "headers": [
     {
       "source": "/(.*)",
