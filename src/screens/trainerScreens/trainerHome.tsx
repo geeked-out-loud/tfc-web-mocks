@@ -8,7 +8,6 @@ import { useTrainerClients } from '../../hooks/useTrainerClients';
 import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 import NotificationDrawer from '../../components/ui/NotificationDrawer';
 import '../../components/ui/scrollbar-hide.css';
-import type { Appointment } from '../../hooks/useTrainer';
 
 interface DashboardStats {
   clientsCount: number;
