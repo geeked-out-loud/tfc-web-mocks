@@ -263,7 +263,7 @@ const TrainerHome: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-medium text-gray-600 mb-1">Meal logs</h4>
                   <p className="text-2xl font-bold text-gray-900 ddc-hardware">{stats.mealLogsCount}</p>
-                  <p className="text-xs text-gray-500 mt-1">3 meals awaiting for response</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.mealLogsCount} meals awaiting for response</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
               </div>

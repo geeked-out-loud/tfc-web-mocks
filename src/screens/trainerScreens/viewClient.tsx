@@ -4,7 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { format, isValid } from 'date-fns';
 import '../../components/ui/scrollbar-hide.css';
 
-import { useTrainerClients } from '../../hooks/useTrainerClients';
 import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 import { apiService } from '../../services/api';
 
@@ -24,9 +23,14 @@ type AssessmentAppointment = {
 };
 
 
+
+
+
 const ViewClient: React.FC = () => {
+  // Extract clientId from URL params
+  const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { clientId } = useParams();
+
   const [activeTab, setActiveTab] = useState<'appointment' | 'gallery'>('appointment');
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
@@ -38,9 +42,14 @@ const ViewClient: React.FC = () => {
   // Dashboard data for assessment appointments (must be inside component)
   const { data: dashboardData, isLoading: dashboardLoading } = useTrainerDashboard();
 
-  // Fetch all clients and find the one matching clientId
-  const { data } = useTrainerClients();
-  const client = data?.clients.find(c => c.id === clientId);
+  // Use dashboard API to get all clients by category and find the one matching clientId
+  const dashboardClients = dashboardData?.clients_by_category?.flatMap((cat: any) => cat.clients) || [];
+  const client = dashboardClients.find((c: any) => c.user_id === clientId);
+
+  // Debug logs for troubleshooting
+  console.log('clientId from URL:', clientId);
+  console.log('dashboardClients user_ids:', dashboardClients.map((c: any) => c.user_id));
+  console.log('Found dashboard client:', client);
 
   // Filter assessment appointments for this client by user_id
   const assessmentAppointments: AssessmentAppointment[] = (dashboardData?.assessment_appointments || []).filter(
@@ -306,6 +315,10 @@ const ViewClient: React.FC = () => {
     console.log("Latest appointment changed:", latestAppointment);
   }, [latestAppointment]);
 
+  // Debug: Log clientId from URL
+  console.log('clientId from URL:', clientId);
+
+  // ...existing code...
   return (
     <div className="min-h-screen lg:h-screen bg-gray-50 lg:overflow-hidden">
       {/* Responsive Container */}
@@ -340,15 +353,15 @@ const ViewClient: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-full bg-gray-200 overflow-hidden">
                     <div className="h-full w-full flex items-center justify-center bg-gray-900 text-white text-sm lg:text-base font-bold ddc-hardware">
-                      {getInitials(client?.user_name || '')}
+                      {getInitials(client?.client_name || client?.user_name || '')}
                     </div>
                   </div>
                   <div>
                     <h1 className="text-lg lg:text-xl font-bold text-gray-900 ddc-hardware">
-                      {client?.user_name || '—'}
+                      {client?.client_name || client?.user_name || '—'}
                     </h1>
                     <p className="text-sm text-gray-500 poppins-regular">
-                      {client?.user_email || ''}
+                      {client?.client_email || client?.user_email || ''}
                     </p>
                   </div>
                 </div>
@@ -689,7 +702,7 @@ const ViewClient: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-900 mb-2 ddc-hardware">Goals</h3>
                 {client?.fitness_goals && client.fitness_goals.length > 0 ? (
                   <ul className="list-disc pl-5">
-                    {client.fitness_goals.map((goal, idx) => (
+                    {client.fitness_goals.map((goal: any, idx: number) => (
                       <li key={idx} className="text-sm text-gray-700 ddc-hardware">{goal}</li>
                     ))}
                   </ul>
@@ -702,7 +715,7 @@ const ViewClient: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-900 mb-2 ddc-hardware">Injuries</h3>
                 {client?.injuries && client.injuries.length > 0 ? (
                   <ul className="list-disc pl-5">
-                    {client.injuries.map((injury, idx) => (
+                    {client.injuries.map((injury: any, idx: number) => (
                       <li key={idx} className="text-sm text-gray-700 ddc-hardware">{injury}</li>
                     ))}
                   </ul>
