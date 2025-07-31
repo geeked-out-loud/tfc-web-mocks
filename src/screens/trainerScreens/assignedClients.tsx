@@ -26,11 +26,6 @@ const AssignedClients: React.FC = () => {
     clients: Client[];
   }
 
-  interface TrainerDashboardData {
-    clients_by_category?: ClientCategory[];
-    // Add other fields if present in API
-  }
-
   const clients: Client[] = (data?.clients_by_category?.flatMap((cat: ClientCategory) =>
     cat.clients.map((client: Client) => ({
       ...client,

@@ -64,13 +64,7 @@ const ViewClient: React.FC = () => {
   // Split into upcoming and completed (compare only UTC date, ignore time)
   const now = new Date();
   const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const upcomingAppointments: AssessmentAppointment[] = assessmentAppointments.filter(
-    (apt: AssessmentAppointment) => {
-      const aptDate = new Date(apt.scheduled_at);
-      const aptDayUTC = Date.UTC(aptDate.getUTCFullYear(), aptDate.getUTCMonth(), aptDate.getUTCDate());
-      return aptDayUTC >= todayUTC;
-    }
-  ).sort((a: AssessmentAppointment, b: AssessmentAppointment) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+
   const completedAppointments: AssessmentAppointment[] = assessmentAppointments.filter(
     (apt: AssessmentAppointment) => {
       const aptDate = new Date(apt.scheduled_at);
