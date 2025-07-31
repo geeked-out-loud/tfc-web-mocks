@@ -1,6 +1,6 @@
 # TFC-Web
 
-A modern web application built with React, TypeScript, and Vite. This project leverages Tailwind CSS for styling and includes a modular component structure for scalable development.
+A modern web application built with React, TypeScript, and Vite. This project leverages Tailwind CSS for styling and includes a modular component structure for scalable development
 
 ## Features
 - ⚡ Fast development with Vite
