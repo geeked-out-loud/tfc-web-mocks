@@ -2,16 +2,10 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@3.0.0"
-    }
-  },
-  
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://43.205.60.23/v1/$1"
+      "destination": "https://api.tfc.fit/v1/$1"
     },
     {
       "source": "/((?!api).*)",
