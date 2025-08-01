@@ -538,6 +538,10 @@ export const apiService = {
     getUpcomingAppointments: async () => {
       const response = await api.get('/weekly-appointments/appointment/latest');
       return response.data;
+    },
+    getMealLogs:async ()=> {
+      const response = await api.get('/meallog/trainer/getmeal-log');
+      return response.data;
     }
   },
   plans: {
