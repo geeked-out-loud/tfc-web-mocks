@@ -16,6 +16,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   height = 'auto',
 }) => {
   const [isRendered, setIsRendered] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Handle animation states
   useEffect(() => {
@@ -23,11 +24,16 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     
     if (isOpen) {
       setIsRendered(true);
+      // Small delay to ensure DOM is ready before starting animation
+      timeoutId = setTimeout(() => {
+        setIsAnimating(true);
+      }, 10);
     } else {
+      setIsAnimating(false);
       // Delay unmounting to allow for close animation
       timeoutId = setTimeout(() => {
         setIsRendered(false);
-      }, 300); // Match the animation duration
+      }, 350); // Slightly longer to ensure smooth closing
     }
     
     return () => {
@@ -42,20 +48,20 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     }
   };
 
-  if (!isRendered && !isOpen) {
+  if (!isRendered) {
     return null;
   }
 
   return (
     <div 
-      className={`fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity duration-300 ${
-        isOpen ? 'opacity-100' : 'opacity-0'
+      className={`fixed inset-0 z-50 bg-black transition-all duration-300 ease-in-out ${
+        isAnimating ? 'bg-opacity-50' : 'bg-opacity-0'
       }`}
       onClick={handleBackdropClick}
     >
       <div 
-        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-xl transform transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-y-0' : 'translate-y-full'
+        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-xl transform transition-all duration-300 ease-in-out ${
+          isAnimating ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ maxHeight: '90vh', height }}
       >

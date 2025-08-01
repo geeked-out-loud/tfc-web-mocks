@@ -7,7 +7,7 @@ import { useCachedPackages } from '../../hooks/useGlobalPackages'
 export default function HomeScreen() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   
-  // Use cached packages data (doesn't trigger fetch)
+  // Use cached packages data (doesn't trigger fetch).
   const { data: packagesData, isLoading, error, isError } = useCachedPackages();
   const packages = packagesData?.packages || [];
 
@@ -167,7 +167,7 @@ export default function HomeScreen() {
                   <Card 
                     heading={pkg.title}
                     description={pkg.short_description}
-                    price={`₹${(parseInt(pkg.price) / 100).toLocaleString()}`}
+                    price={`₹${parseInt(pkg.price).toLocaleString()}`}
                     image={pkg.image_url}
                     isSelected={selectedCard === i} 
                     onClick={() => setSelectedCard(selectedCard === i ? null : i)} 

@@ -20,7 +20,7 @@ const PackagesScreen: React.FC = () => {
     id: index,
     title: pkg.title.toUpperCase(),
     description: pkg.short_description,
-    price: `₹${(parseInt(pkg.price) / 100).toLocaleString()}/-`,
+    price: `₹${parseInt(pkg.price).toLocaleString()}/-`,
     image: pkg.image_url
   }));
 

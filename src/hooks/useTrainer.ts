@@ -116,12 +116,12 @@ export interface Trainer {
   image?: string;
   created_at: string;
   updated_at: string;
-  // We'll keep these for backward compatibility with existing code
+  // for backward compatibility with existing code
   fullName?: string;
   email?: string;
-  clients?: number;
-  mealLogs?: number;
-  appointments?: number;
+  clients?: number
+  mealLogs?: number
+  appointments?: number
 }
 
 // Appointment interface definition
@@ -132,6 +132,12 @@ export interface Appointment {
   appointmentNumber: number;
   type: 'EXERCISE' | 'NUTRITION' | 'ASSESSMENT';
   sessionType: 'physical' | 'online' | 'self';
+}
+
+export interface AppointmentRequest {
+  membershipId:string,
+  scheduledAt: string;
+  appointmentType: 'TRAINING' | 'NUTRITION';
 }
 
 export interface AppointmentsResponse {
@@ -179,15 +185,25 @@ export const useTrainerAppointments = (filters?: {
 /**
  * Hook for fetching trainer profile data
  */
+import { apiService } from '../services/api';
+import sessionService from '../services/sessionService';
+
 export const useTrainerProfile = () => {
   return useQuery<Trainer, Error>({
     queryKey: ['trainerProfile'],
     queryFn: async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Return mock data instead of API call
-      return mockTrainerProfile;
+      try {
+        // Try to fetch from real API
+        const token = sessionService.getToken();
+        if (!token) throw new Error('No auth token');
+        const data = await apiService.trainer.getProfile();
+        // Optionally, validate/transform data here
+        return data;
+      } catch (err) {
+        // Fallback to mock data if API fails
+        console.warn('Falling back to mock trainer profile:', err);
+        return mockTrainerProfile;
+      }
     },
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 60 * 60 * 1000, // 1 hour

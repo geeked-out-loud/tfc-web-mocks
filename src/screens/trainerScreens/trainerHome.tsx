@@ -4,8 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useTrainerProfile, useTrainerAppointments } from '../../hooks/useTrainer';
+import { useTrainerClients } from '../../hooks/useTrainerClients';
+import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 import NotificationDrawer from '../../components/ui/NotificationDrawer';
-import type { Appointment } from '../../hooks/useTrainer';
+import '../../components/ui/scrollbar-hide.css';
 
 interface DashboardStats {
   clientsCount: number;
@@ -18,7 +20,6 @@ const TrainerHome: React.FC = () => {
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
   
@@ -29,6 +30,7 @@ const TrainerHome: React.FC = () => {
   });
 
   // Define our tab types
+  // Tabs definition for display
   const packageTabs = [
     { id: 'all', title: 'All' },
     { id: 'physical', title: 'Physical live' },
@@ -36,9 +38,38 @@ const TrainerHome: React.FC = () => {
     { id: 'exercise', title: 'Exercise' },
     { id: 'nutrition', title: 'Nutrition' }
   ];
-  
-  // For fallback if API fails
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
+
+ 
+  // Appointments to display for the selected tab, filtered by tab/category
+  const getAppointmentsForTab = (): any[] => {
+    if (!dashboardData || !dashboardData.today_appointments) return [];
+    const allAppointments = dashboardData.today_appointments;
+    if (activeTab === 'all') return allAppointments;
+    if (activeTab === 'physical') {
+      // Show only PHYSICAL session_type
+      return allAppointments.filter((a: any) => (a.session_type || '').toUpperCase() === 'PHYSICAL');
+    }
+    if (activeTab === 'online') {
+      // Show only ONLINE session_type
+      return allAppointments.filter((a: any) => (a.session_type || '').toUpperCase() === 'ONLINE');
+    }
+    if (activeTab === 'exercise') {
+      // Show only EXERCISE type (if available)
+      return allAppointments.filter((a: any) => (a.type || '').toUpperCase() === 'EXERCISE');
+    }
+    if (activeTab === 'nutrition') {
+      // Show only NUTRITION type (if available)
+      return allAppointments.filter((a: any) => (a.type || '').toUpperCase() === 'NUTRITION');
+    }
+    return allAppointments;
+  };
+
+  // Dashboard API
+  const { data: dashboardData, isLoading: isLoadingDashboard, error: dashboardError } = useTrainerDashboard();
+
+  // Trainer clients API for total assigned clients
+  const { data: trainerClientsData, isLoading: isLoadingClients, error: clientsError } = useTrainerClients();
+
 
   // Use the trainer profile hook
   const { 
@@ -50,8 +81,6 @@ const TrainerHome: React.FC = () => {
   // Use the trainer appointments hook with filters based on activeTab
   const { 
     data: appointmentsData, 
-    isLoading: isLoadingAppointments,
-    error: appointmentsError
   } = useTrainerAppointments(
     activeTab !== 'all' ? {
       sessionType: (
@@ -71,48 +100,26 @@ const TrainerHome: React.FC = () => {
     } : undefined
   );
 
+
+
   // Update trainer data when profile is loaded
   useEffect(() => {
-    setIsLoading(isLoadingTrainer);
-    
-    if (trainerError) {
-      const err = trainerError as Error;
-      setError(err.message);
-      
-      // Handle special case when navigating too soon during registration
-      if (err.message.includes('401') || err.message.includes('unauthorized')) {
-        const navigateBackToAuth = () => {
-          console.log('Redirecting back to trainer login due to auth issues...');
-          navigate('/trainer/login');
-        };
-        setTimeout(navigateBackToAuth, 2000);
-      }
+    // setIsLoading(isLoadingTrainer || isLoadingDashboard || isLoadingClients);
+    const err = (trainerError || dashboardError || clientsError) as Error;
+    setError(err.message);
+    if (err.message.includes('401') || err.message.includes('unauthorized')) {
+      const navigateBackToAuth = () => {
+        console.log('Redirecting back to trainer login due to auth issues...');
+        navigate('/trainer/login');
+      };
+      setTimeout(navigateBackToAuth, 2000);
     }
-    
-    if (trainerProfileData) {
-      // Update stats with data from the trainer profile
-      setStats({
-        clientsCount: trainerProfileData.clients || 0,
-        mealLogsCount: trainerProfileData.mealLogs || 0,
-        appointmentsCount: appointmentsData?.appointments?.length || 0
-      });
-    }
-  }, [trainerProfileData, isLoadingTrainer, trainerError, user, navigate]);;
-
-  // Update filtered appointments when appointments data changes
-  useEffect(() => {
-    setIsLoading(isLoadingAppointments);
-    
-    if (appointmentsError) {
-      setError((appointmentsError as Error).message);
-    }
-    
-    if (appointmentsData?.appointments) {
-      // API already filters the appointments based on the query params
-      // So we can just use the data directly
-      setFilteredAppointments(appointmentsData.appointments);
-    }
-  }, [appointmentsData, isLoadingAppointments, appointmentsError]);
+    setStats({
+      clientsCount: trainerClientsData?.count || 0,
+      mealLogsCount: trainerProfileData?.mealLogs || 0,
+      appointmentsCount: appointmentsData?.appointments?.length || 0
+    });
+  }, [trainerProfileData, isLoadingTrainer, trainerError, user, navigate, dashboardData, isLoadingDashboard, dashboardError, trainerClientsData, isLoadingClients, clientsError, appointmentsData]);
 
   // Function to scroll to the active package type
   const scrollToActiveTab = () => {
@@ -216,15 +223,33 @@ const TrainerHome: React.FC = () => {
             </div>
           )}
           
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-xs font-medium text-gray-500">Clients</h4>
-              <p className="text-xl font-bold">{stats.clientsCount}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-xs font-medium text-gray-500">Meal Logs</h4>
-              <p className="text-xl font-bold">{stats.mealLogsCount}</p>
-            </div>
+          <div className="space-y-3 mb-6">
+            <button 
+              onClick={() => navigate('/trainer/assigned-clients')}
+              className="w-full bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-1">Assigned Clients</h4>
+                  <p className="text-2xl font-bold text-gray-900 ddc-hardware">{stats.clientsCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">You have {stats.clientsCount} assigned clients</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              </div>
+            </button>
+            <button 
+              onClick={() => alert('Meal logs feature coming soon!')}
+              className="w-full bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-600 mb-1">Meal logs</h4>
+                  <p className="text-2xl font-bold text-gray-900 ddc-hardware">{stats.mealLogsCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.mealLogsCount} meals awaiting for response</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+              </div>
+            </button>
           </div>
           
           <button
@@ -331,7 +356,10 @@ const TrainerHome: React.FC = () => {
                 <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
               </div>
             </button>
-            <button className="bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group">
+            <button 
+              onClick={() => alert('Meal logs feature coming soon!')}
+              className="bg-white border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow text-left group"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-medium text-gray-600 mb-1">Meal logs</h4>
@@ -350,20 +378,20 @@ const TrainerHome: React.FC = () => {
               className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide" 
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {packageTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  data-id={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-md text-center text-sm font-medium transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-[#262012] text-white' 
-                      : 'bg-white border-2 border-gray-300 text-gray-800 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.title}
-                </button>
-              ))}
+            {packageTabs.map((tab) => (
+              <button
+                key={tab.id}
+                data-id={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-shrink-0 px-4 py-2 rounded-md text-center text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-[#262012] text-white' 
+                    : 'bg-white border-2 border-gray-300 text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                {tab.title}
+              </button>
+            ))}
             </div>
           </div>
           
@@ -374,12 +402,12 @@ const TrainerHome: React.FC = () => {
                 <h3 className="font-semibold text-gray-900 text-lg poppins-medium">Today's Appointments</h3>
                 <p className="text-sm text-gray-500 poppins-regular">appointments scheduled today</p>
               </div>
-              {isLoading ? (
+              {isLoadingDashboard ? (
                 <div className="h-12 w-12 bg-gray-200 rounded animate-pulse"></div>
               ) : (
                 <div className="text-right">
                   <div className="text-3xl font-bold text-gray-900 ddc-hardware">
-                    {filteredAppointments.length.toString().padStart(2, '0')}
+                    {getAppointmentsForTab().length.toString().padStart(2, '0')}
                   </div>
                 </div>
               )}
@@ -397,51 +425,45 @@ const TrainerHome: React.FC = () => {
               </div>
             )}
 
-            {isLoading ? (
+            {isLoadingDashboard ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-10 w-10 text-yellow-500 animate-spin" />
               </div>
+            ) : getAppointmentsForTab().length === 0 ? (
+              <div className="text-center py-16 bg-gray-50 rounded-lg">
+                <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-600 font-medium">No Appointments</p>
+              </div>
             ) : (
-              <div className="space-y-4 mt-2">
-                {filteredAppointments.length === 0 ? (
-                  <div className="text-center py-16 bg-gray-50 rounded-lg">
-                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-600 font-medium">No appointments match the selected filter</p>
-                    <button 
-                      className="mt-3 text-sm text-yellow-600 underline"
-                      onClick={() => setActiveTab('all')}
-                    >
-                      View all appointments
-                    </button>
-                  </div>
-                ) : (
+              <div className="h-96 overflow-y-auto scrollbar-hide">
+                <div className="space-y-4 mt-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                    {filteredAppointments.map((appointment) => (
+                    {getAppointmentsForTab().map((appointment: any) => (
                       <div 
                         key={appointment.id} 
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-center">
                           <div className="w-14 h-16 flex flex-col items-center justify-center bg-gray-100 rounded-md mr-4">
-                            <span className="text-sm font-bold">{format(new Date(appointment.date), 'dd')}</span>
-                            <span className="text-xs">{format(new Date(appointment.date), 'MMM')}</span>
+                            <span className="text-sm font-bold">{format(new Date(appointment.scheduled_at), 'dd')}</span>
+                            <span className="text-xs">{format(new Date(appointment.scheduled_at), 'MMM')}</span>
                           </div>
                           <div>
                             <div className="flex items-center">
                               <div className="h-6 w-6 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs mr-2">
                                 <Users className="h-3 w-3" />
                               </div>
-                              <p className="text-base font-bold">{appointment.clientName}</p>
+                              <p className="text-base font-bold">{appointment.user_name || 'Client'}</p>
                             </div>
-                            <p className="text-xs text-gray-500">Appointment {appointment.appointmentNumber}</p>
+                            <p className="text-xs text-gray-500">Appointment</p>
                             <span 
                               className={`inline-block mt-2 text-white text-xs py-1 px-2 rounded ${
-                                appointment.type === 'EXERCISE' ? 'bg-yellow-500' :
-                                appointment.type === 'NUTRITION' ? 'bg-green-500' :
+                                appointment.session_type === 'EXERCISE' ? 'bg-yellow-500' :
+                                appointment.session_type === 'NUTRITION' ? 'bg-green-500' :
                                 'bg-blue-500'
                               }`}
                             >
-                              {appointment.type}
+                              {appointment.session_type}
                             </span>
                           </div>
                         </div>
@@ -449,7 +471,7 @@ const TrainerHome: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
