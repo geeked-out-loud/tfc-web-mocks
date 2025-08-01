@@ -26,6 +26,7 @@ const api = axios.create({
 // Import session service and firebase auth
 import sessionService from './sessionService';
 import { auth } from './firebase';
+import { add } from 'date-fns';
 
 
 api.interceptors.request.use(
@@ -511,9 +512,9 @@ export const apiService = {
       const response = await api.get('/plans');
       return response.data;
     },
-    addAppointment: async (formData : FormData) => {
+    addAppointment: async (formData: FormData) => {
       try {
-        const response = await axios.post('http://ec2-43-205-60-23.ap-south-1.compute.amazonaws.com:80/v1/weekly-appointments/appointment/trainer', formData , {
+        const response = await axios.post('http://ec2-43-205-60-23.ap-south-1.compute.amazonaws.com:80/v1/weekly-appointments/appointment/trainer', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${sessionService.getToken()}`
@@ -539,11 +540,26 @@ export const apiService = {
       const response = await api.get('/weekly-appointments/appointment/latest');
       return response.data;
     },
-    getMealLogs:async ()=> {
+    getMealLogs: async () => {
       const response = await api.get('/meallog/trainer/getmeal-log');
+      return response.data;
+    },
+    getClientDetails: async (clientId: string) => {
+      const response = await api.get(`/trainers/clients/${clientId}`);
+      return response.data;
+    },
+    getMealLogMessages: async (mealLogId: string) => {
+      if (!mealLogId) return [];
+      const response = await api.get(`/meallog/get-messages/${mealLogId}`);
+      return response.data;
+    },
+    addMealLogMessage: async (mealLogId: string, message: string) => {
+      if (!mealLogId) throw new Error('Meal log ID is required');
+      const response = await api.post(`/meallog/send-message/${mealLogId}`, { content:message });
       return response.data;
     }
   },
+
   plans: {
     submitMealPlan: async (formData: FormData) => {
       try {

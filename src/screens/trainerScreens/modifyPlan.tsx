@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Play, Search, Utensils } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../../services/api';
+import { useClientDetails } from '../../hooks/useTrainerPlans';
 
 // Mock video data - simple carousel
 const allVideos = [
@@ -48,7 +49,9 @@ const ModifyPlan: React.FC = () => {
     video.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const membershipId = "65d7ded6-bb5f-43f6-a531-63f555775d96"
+  const { clientId } = useParams<{ clientId: string }>();
+  const { data: clientDetails } = useClientDetails(clientId || '');
+  const membershipId = clientDetails?.membership_id; 
 
   const handleSubmit = async () => {
     if (!pdfFile) {
@@ -82,14 +85,14 @@ const ModifyPlan: React.FC = () => {
         console.log('Upload successful:', response.data);
         alert('Meal plan submitted!');
         setIsAddMealModalOpen(false);
-        
+
 
       } else {
         console.error('Upload failed');
         alert('Upload failed.');
 
       }
-        setIsLoading(false);
+      setIsLoading(false);
 
 
     } catch (error) {
@@ -103,7 +106,7 @@ const ModifyPlan: React.FC = () => {
       endDate,
       message
     });
-  
+
   };
 
   return (

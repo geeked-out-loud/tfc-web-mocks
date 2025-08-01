@@ -8,7 +8,7 @@ import { useTrainerClients } from '../../hooks/useTrainerClients';
 import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 import NotificationDrawer from '../../components/ui/NotificationDrawer';
 import '../../components/ui/scrollbar-hide.css';
-
+import { useTrainerMealLogs } from '../../hooks/useTrainerMealLogs';
 interface DashboardStats {
   clientsCount: number;
   mealLogsCount: number;
@@ -78,6 +78,28 @@ const TrainerHome: React.FC = () => {
     error: trainerError
   } = useTrainerProfile();
 
+  const { data: mealLogsData, isLoading: isLoadingMealLogs } = useTrainerMealLogs();
+
+  useEffect(() => {
+    if (isLoadingMealLogs || !mealLogsData) return;
+
+    const todayMealLogsCount = mealLogsData
+      .map((log: any) => {
+        const logDate = new Date(log.created_at);
+        const today = new Date();
+        return logDate.toDateString() === today.toDateString() ? log : null;
+      })
+      .filter((log: any) => log !== null).length;
+
+    setStats((prevStats) => ({
+      ...prevStats,
+      mealLogsCount: todayMealLogsCount
+    }));
+  }, [mealLogsData, isLoadingMealLogs]);
+
+
+
+
   // Use the trainer appointments hook with filters based on activeTab
   const {
     data: appointmentsData,
@@ -115,8 +137,8 @@ const TrainerHome: React.FC = () => {
       setTimeout(navigateBackToAuth, 2000);
     }
     setStats({
+      ...stats,
       clientsCount: trainerClientsData?.count || 0,
-      mealLogsCount: trainerProfileData?.mealLogs || 0,
       appointmentsCount: appointmentsData?.appointments?.length || 0
     });
   }, [trainerProfileData, isLoadingTrainer, trainerError, user, navigate, dashboardData, isLoadingDashboard, dashboardError, trainerClientsData, isLoadingClients, clientsError, appointmentsData]);
@@ -384,8 +406,8 @@ const TrainerHome: React.FC = () => {
                   data-id={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-shrink-0 px-4 py-2 rounded-md text-center text-sm font-medium transition-all ${activeTab === tab.id
-                      ? 'bg-[#262012] text-white'
-                      : 'bg-white border-2 border-gray-300 text-gray-800 hover:bg-gray-50'
+                    ? 'bg-[#262012] text-white'
+                    : 'bg-white border-2 border-gray-300 text-gray-800 hover:bg-gray-50'
                     }`}
                 >
                   {tab.title}
@@ -457,8 +479,8 @@ const TrainerHome: React.FC = () => {
                             <p className="text-xs text-gray-500">Appointment</p>
                             <span
                               className={`inline-block mt-2 text-white text-xs py-1 px-2 rounded ${appointment.session_type === 'EXERCISE' ? 'bg-yellow-500' :
-                                  appointment.session_type === 'NUTRITION' ? 'bg-green-500' :
-                                    'bg-blue-500'
+                                appointment.session_type === 'NUTRITION' ? 'bg-green-500' :
+                                  'bg-blue-500'
                                 }`}
                             >
                               {appointment.session_type}
