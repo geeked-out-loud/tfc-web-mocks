@@ -26,7 +26,7 @@ const api = axios.create({
 // Import session service and firebase auth
 import sessionService from './sessionService';
 import { auth } from './firebase';
-import { add } from 'date-fns';
+
 
 
 api.interceptors.request.use(
