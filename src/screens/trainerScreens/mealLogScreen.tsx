@@ -54,9 +54,7 @@ export default function MealLogScreen() {
     const { data: mealLogs = [] } = useTrainerMealLogs();
 
     const {
-        data: trainerProfileData,
-        isLoading: isLoadingTrainer,
-        error: trainerError
+        data: trainerProfileData
     } = useTrainerProfile();
 
 
