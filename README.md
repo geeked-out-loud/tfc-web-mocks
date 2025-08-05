@@ -8,7 +8,7 @@ A modern web application built with React, TypeScript, and Vite. This project le
 - 🎨 Tailwind CSS for rapid UI
 - 🛠️ ESLint for code quality
 - 🔥 Hot Module Replacement (HMR)
-- 📁 Modular folder structure
+- 📁 Modular folder structure.
 
 ## Getting Started
 
