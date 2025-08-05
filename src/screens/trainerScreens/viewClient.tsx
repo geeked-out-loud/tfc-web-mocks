@@ -6,6 +6,7 @@ import '../../components/ui/scrollbar-hide.css';
 
 import { useTrainerDashboard } from '../../hooks/useTrainerDashboard';
 import { apiService } from '../../services/api';
+import { useClientDetails } from '../../hooks/useTrainerPlans';
 
 
 type AssessmentAppointment = {
@@ -180,10 +181,11 @@ const ViewClient: React.FC = () => {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMins}`;
   }
 
+  const {data: clientDetails} = useClientDetails(clientId || '');
 
-  const membershipId = "65d7ded6-bb5f-43f6-a531-63f555775d96"// Replace with actual membership ID logic
+  console.log('Client Details:', clientDetails);
 
-
+  const membershipId = clientDetails?.membership_id ; // Replace with actual membership ID logic
 
   const handleBookSession = async () => {
     if (!selectedDate || !selectedTime || !membershipId || !appointmentType) {

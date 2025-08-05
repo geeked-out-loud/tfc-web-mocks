@@ -18,6 +18,7 @@ import ViewClient from './screens/trainerScreens/viewClient'
 import ClientSchedulePage from './screens/trainerScreens/clientSchedulePage'
 import ModifyPlan from './screens/trainerScreens/modifyPlan'
 import ClientAssessment from './screens/trainerScreens/clientAssessment'
+import MealLogScreen from './screens/trainerScreens/mealLogScreen'
 
 // Import navigation
 import Navigation from './components/ui/Navigation'
@@ -91,6 +92,15 @@ function App() {
                 <ClientAssessment />
               </ProtectedRoute>
             } 
+          />
+
+          <Route 
+            path="/trainer/meal-logs" 
+            element={
+              <ProtectedRoute>
+                <MealLogScreen /> 
+              </ProtectedRoute>
+            }
           />
                     
           {/* Public routes with navigation */}
