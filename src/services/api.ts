@@ -505,14 +505,18 @@ export const apiService = {
       const response = await api.get('/plans');
       return response.data;
     },
-    addAppointment: async (formData: FormData) => {
+    addAppointment: async (formData : FormData) => {
       try {
-        const response = await axios.post('http://ec2-43-205-60-23.ap-south-1.compute.amazonaws.com:80/v1/weekly-appointments/appointment/trainer', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${sessionService.getToken()}`
+        const response = await axios.post(
+          `${API_BASE_URL}/weekly-appointments/appointment/trainer`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              'Authorization': `Bearer ${sessionService.getToken()}`
+            }
           }
-        });
+        );
 
         console.log('API: Meal plan submitted successfully:', response.data);
         return response;
@@ -556,12 +560,16 @@ export const apiService = {
   plans: {
     submitMealPlan: async (formData: FormData) => {
       try {
-        const response = await axios.post('http://ec2-43-205-60-23.ap-south-1.compute.amazonaws.com:80/v1/plans/nutrition-plan', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${sessionService.getToken()}`
+        const response = await axios.post(
+          `${API_BASE_URL}/plans/nutrition-plan`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              'Authorization': `Bearer ${sessionService.getToken()}`
+            }
           }
-        });
+        );
 
         console.log('API: Meal plan submitted successfully:', response.data);
         return response;
