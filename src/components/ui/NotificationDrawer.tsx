@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BottomSheet from './BottomSheet';
 import { Bell, X } from 'lucide-react';
 import { format } from 'date-fns';
+import api from '../../services/api';
 
 export interface Notification {
   id: string;
@@ -9,6 +10,7 @@ export interface Notification {
   message: string;
   isRead: boolean;
   createdAt: string;
+  category?: string;
 }
 
 interface NotificationDrawerProps {
@@ -16,63 +18,45 @@ interface NotificationDrawerProps {
   onClose: () => void;
 }
 
-// Simple mock notifications data
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'New Appointment Scheduled',
-    message: 'Rajesh Kumar has booked a training session for today at 4:00 PM',
-    isRead: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'Session Completed',
-    message: 'Your session with Priya Sharma has been completed successfully',
-    isRead: false,
-    createdAt: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: '3',
-    title: 'New Message',
-    message: 'Arjun Paluoy sent you a message about his meal plan',
-    isRead: true,
-    createdAt: new Date(Date.now() - 7200000).toISOString()
-  },
-  {
-    id: '4',
-    title: 'Session Reminder',
-    message: 'You have a session with Vijay Malvya in 30 minutes',
-    isRead: true,
-    createdAt: new Date(Date.now() - 14400000).toISOString()
-  },
-  {
-    id: '5',
-    title: 'Weekly Report',
-    message: 'Your weekly performance report is now available',
-    isRead: true,
-    createdAt: new Date(Date.now() - 86400000).toISOString()
-  }
-];
+// ...existing code...
 
 const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simulate fetching notifications from API
   useEffect(() => {
-    if (isOpen) {
+    const fetchNotifications = async () => {
       setLoading(true);
-      // Simulate API delay
-      setTimeout(() => {
-        setNotifications(mockNotifications);
+      setError(null);
+      try {
+        const response = await api.get('/notification/get-notification');
+        const apiData = response.data;
+        const flatNotifications: Notification[] = apiData.flatMap((group: any) =>
+          group.notifications.map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            message: n.body,
+            isRead: n.is_seen,
+            createdAt: n.datetime,
+            category: n.category,
+          }))
+        );
+        flatNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setNotifications(flatNotifications);
+      } catch (err: any) {
+        setError('Failed to load notifications');
+      } finally {
         setLoading(false);
-      }, 500);
+      }
+    };
+    if (isOpen) {
+      fetchNotifications();
     }
   }, [isOpen]);
 
   const markAsRead = (id: string) => {
-    setNotifications(notifications.map(notification => 
+    setNotifications(notifications.map(notification =>
       notification.id === id ? { ...notification, isRead: true } : notification
     ));
   };
@@ -80,30 +64,25 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    
-    // If today, show time only
     if (date.toDateString() === now.toDateString()) {
       return `Today at ${format(date, 'h:mm a')}`;
     }
-    
-    // If yesterday
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     if (date.toDateString() === yesterday.toDateString()) {
       return `Yesterday at ${format(date, 'h:mm a')}`;
     }
-    
-    // Otherwise show full date
     return format(date, 'MMM d, yyyy • h:mm a');
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} height="70vh" title="Notifications">
-      <div className="px-4 py-3 flex justify-between items-center border-b bg-gray-50">
+    <BottomSheet isOpen={isOpen} onClose={onClose} height="70vh">
+      
+      <div className="px-4 pb-4 flex justify-between items-center border-b">
         <div className="flex items-center">
-          <Bell className="h-5 w-5 text-gray-600 mr-2" />
+          <Bell className="h-5 w-5 text-gray-600 mr-3" />
           <h2 className="text-lg font-semibold">Notifications</h2>
           {unreadCount > 0 && (
             <span className="bg-gray-800 text-white text-xs rounded-full px-2 py-0.5 ml-2 font-medium">
@@ -124,6 +103,12 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
           <div className="flex flex-col justify-center items-center p-12">
             <div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-gray-600 rounded-full mb-4"></div>
             <p className="text-gray-500 text-sm">Loading notifications...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-red-500 mb-2">{error}</h3>
+            <p className="text-gray-400 text-sm">Please try again later.</p>
           </div>
         ) : notifications.length === 0 ? (
           <div className="text-center py-16">
@@ -150,7 +135,6 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
                     }`} />
                   </div>
                 </div>
-                
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <h3 className={`font-semibold text-sm ${
@@ -173,6 +157,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
         )}
       </div>
     </BottomSheet>
+    
   );
 };
 

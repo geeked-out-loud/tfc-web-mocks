@@ -106,8 +106,8 @@ const TrainerHome: React.FC = () => {
   useEffect(() => {
     // setIsLoading(isLoadingTrainer || isLoadingDashboard || isLoadingClients);
     const err = (trainerError || dashboardError || clientsError) as Error;
-    setError(err.message);
-    if (err.message.includes('401') || err.message.includes('unauthorized')) {
+    setError(err?.message);
+    if (err?.message.includes('401') || err?.message.includes('unauthorized')) {
       const navigateBackToAuth = () => {
         console.log('Redirecting back to trainer login due to auth issues...');
         navigate('/trainer/login');
